@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import csv
+import gzip
 import io
 import json
 import random
@@ -11,7 +12,22 @@ import zipfile
 from dataclasses import dataclass
 from pathlib import Path
 
-URL = "https://public.ukp.informatik.tu-darmstadt.de/thakur/BEIR/datasets/scifact.zip"
+HF = "https://huggingface.co/datasets/BeIR"
+HF_FILES = {
+    "corpus.jsonl": f"{HF}/scifact/resolve/main/corpus.jsonl.gz",
+    "queries.jsonl": f"{HF}/scifact/resolve/main/queries.jsonl.gz",
+    "qrels/test.tsv": f"{HF}/scifact-qrels/resolve/main/test.tsv",
+}
+# Original BEIR host; slow and sometimes unreachable from CI runners, so only a fallback.
+UKP_URL = "https://public.ukp.informatik.tu-darmstadt.de/thakur/BEIR/datasets/scifact.zip"
+
+
+def _fetch(url: str) -> bytes:
+    if not url.startswith("https://"):
+        raise ValueError(url)
+    with urllib.request.urlopen(url, timeout=120) as r:  # noqa: S310
+        data: bytes = r.read()
+    return gzip.decompress(data) if url.endswith(".gz") else data
 
 
 @dataclass(frozen=True)
@@ -23,10 +39,16 @@ class Slice:
 
 def download(cache_dir: Path) -> Path:
     root = cache_dir / "scifact"
-    if not (root / "corpus.jsonl").exists():
+    if (root / "corpus.jsonl").exists():
+        return root
+    try:
+        for rel, url in HF_FILES.items():
+            dest = root / rel
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            dest.write_bytes(_fetch(url))
+    except OSError:
         cache_dir.mkdir(parents=True, exist_ok=True)
-        with urllib.request.urlopen(URL, timeout=120) as r:
-            zipfile.ZipFile(io.BytesIO(r.read())).extractall(cache_dir)
+        zipfile.ZipFile(io.BytesIO(_fetch(UKP_URL))).extractall(cache_dir)
     return root
 
 
