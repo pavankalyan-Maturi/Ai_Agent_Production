@@ -22,7 +22,7 @@ from typing import Protocol
 
 from retrieval.types import Chunk
 
-PROMPT_VERSION = "v1"
+PROMPT_VERSION = "v2"  # v2: gpt-oss reasoning_effort=low; v1 Groq contexts discarded
 DEFAULT_MODEL = "claude-haiku-5-5"
 
 DOC_PROMPT = "<document>\n{doc}\n</document>"
@@ -213,12 +213,22 @@ class GroqContextualizer:
                 }
             ],
         }
+        if self.model.startswith("openai/gpt-oss"):
+            # Reasoning model: keep reasoning short and out of the returned content.
+            body["reasoning_effort"] = "low"
+            body["include_reasoning"] = False
+            body["max_tokens"] = self.max_tokens + 300
+        last = ""
         for attempt in range(8):
             if self.deadline is not None and time.monotonic() > self.deadline:
-                raise ContextBudgetExceeded
+                raise ContextBudgetExceeded("deadline")
             r = self._http.post(self.URL, json=body)
             if r.status_code == 429 or r.status_code >= 500:
                 wait = float(r.headers.get("retry-after", 2**attempt))
+                last = f"{r.status_code} retry-after={wait:.0f}s {r.text[:200]}"
+                if r.status_code == 429 and wait > 120:
+                    # Daily quota, not a per-minute limit: stop; the disk cache resumes next run.
+                    raise ContextBudgetExceeded(f"Groq quota: {last}")
                 time.sleep(min(wait, 60))
                 continue
             if r.is_error:
@@ -230,7 +240,7 @@ class GroqContextualizer:
                 self.usage.input_tokens += int(u.get("prompt_tokens", 0))
                 self.usage.output_tokens += int(u.get("completion_tokens", 0))
             return str(data["choices"][0]["message"]["content"]).strip()
-        raise RuntimeError("Groq: retries exhausted")
+        raise ContextBudgetExceeded(f"Groq rate limit, retries exhausted: {last}")
 
     def contextualize(self, doc_text: str, chunks: list[Chunk]) -> list[Chunk]:
         out = []

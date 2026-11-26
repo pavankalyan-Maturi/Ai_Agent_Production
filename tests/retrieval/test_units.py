@@ -168,3 +168,25 @@ def test_groq_resolve_model_falls_back_when_preferred_is_retired() -> None:
     )
     with pytest.raises(RuntimeError, match="none of"):
         pick("k", "gone", models(["whisper-large-v3"]))
+
+
+def test_groq_daily_quota_stops_with_budget_exceeded(tmp_path, monkeypatch) -> None:
+    import httpx2
+    import pytest
+
+    from retrieval.contextual import ContextBudgetExceeded, GroqContextualizer
+
+    monkeypatch.setattr("time.sleep", lambda s: None)
+    cz = GroqContextualizer(
+        DiskCache(tmp_path / "c.jsonl"), api_key="k", model="openai/gpt-oss-20b"
+    )
+    seen = {}
+
+    def handler(req: httpx2.Request) -> httpx2.Response:
+        seen["body"] = req.read()
+        return httpx2.Response(429, headers={"retry-after": "3600"}, text="tokens per day")
+
+    cz._http = httpx2.Client(transport=httpx2.MockTransport(handler))
+    with pytest.raises(ContextBudgetExceeded, match="quota"):
+        cz.contextualize("alpha", chunk_document(doc("alpha")))
+    assert b'"reasoning_effort":"low"' in seen["body"].replace(b" ", b"")

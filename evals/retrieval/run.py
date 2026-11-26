@@ -145,10 +145,10 @@ def main() -> None:
             czr.deadline = time.monotonic() + a.context_budget_min * 60
         try:
             chunks = build_chunks(sl, tenant, a.chunk_size, a.overlap, czr, a.workers)
-        except ContextBudgetExceeded:
+        except ContextBudgetExceeded as e:
             done = len(cz.cache._d) if cz else 0
             report["rows"] += _unmeasured(
-                variant, f"context budget hit, {done} contexts cached, rerun to resume"
+                variant, f"context budget hit ({e}), {done} contexts cached, rerun to resume"[:300]
             )
             continue
         except Exception as e:  # provider failure must not discard the naive rows
