@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import random
+import threading
 from functools import lru_cache
 from typing import Any
 
@@ -39,8 +40,17 @@ def backoff(retries: int, base: float = 2.0, cap: float = 60.0) -> float:
     return random.uniform(0, min(cap, base * 2**retries))  # noqa: S311
 
 
-@lru_cache(maxsize=1)
+_DEPS_LOCK = threading.Lock()
+
+
 def _deps() -> tuple[Settings, Any, JobStore, PgStore, Embedder]:
+    # Thread-pool workers call this concurrently on the first tasks; build once.
+    with _DEPS_LOCK:
+        return _build_deps()
+
+
+@lru_cache(maxsize=1)
+def _build_deps() -> tuple[Settings, Any, JobStore, PgStore, Embedder]:
     import boto3
 
     s = get_settings()
@@ -87,8 +97,12 @@ def fetch_text(s3: Any, bucket: str, key: str, max_bytes: int) -> str:
 def ingest_document(
     self: Task, tenant_id: str, bucket: str, key: str, ikey: str
 ) -> dict[str, object]:
-    s, s3, jobs, store, embedder = _deps()
-    if not jobs.claim(tenant_id, ikey):
+    try:
+        s, s3, jobs, store, embedder = _deps()
+        claimed = jobs.claim(tenant_id, ikey)
+    except psycopg.OperationalError as e:  # DB not reachable yet: retry, never drop
+        raise self.retry(exc=e, countdown=backoff(self.request.retries), max_retries=10) from e
+    if not claimed:
         return {"status": "duplicate", "ikey": ikey}
     try:
         text = fetch_text(s3, bucket, key, s.ingest_max_bytes)

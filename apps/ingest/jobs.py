@@ -54,7 +54,9 @@ class JobStore:
         return psycopg.connect(self.dsn, prepare_threshold=None, autocommit=True)
 
     def migrate(self) -> None:
-        with self._conn() as c:
+        # Serialised across processes; see PgStore.migrate.
+        with psycopg.connect(self.dsn, prepare_threshold=None) as c, c.transaction():
+            c.execute("SELECT pg_advisory_xact_lock(hashtext('pap.migrate.ingest_jobs'))")
             c.execute(SCHEMA)
 
     def create(self, tenant_id: str, ikey: str, bucket: str, object_key: str) -> bool:

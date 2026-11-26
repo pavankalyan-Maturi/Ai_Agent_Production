@@ -62,6 +62,8 @@ def make_app(settings: Settings | None = None) -> Celery:
         task_routes={"pap.ingest_document": {"queue": INGEST_QUEUE}},
         task_acks_late=True,
         task_reject_on_worker_lost=True,
+        # Anything that escapes the task is rejected (-> DLQ), never acked and silently lost.
+        task_acks_on_failure_or_timeout=False,
         worker_prefetch_multiplier=1,
         task_serializer="json",
         accept_content=["json"],

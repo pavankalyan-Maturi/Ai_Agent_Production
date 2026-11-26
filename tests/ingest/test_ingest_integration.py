@@ -46,7 +46,7 @@ def env() -> Iterator[dict]:
     from apps.ingest import tasks
 
     get_settings.cache_clear()
-    tasks._deps.cache_clear()
+    tasks._build_deps.cache_clear()
     s3 = boto3.client(
         "s3",
         endpoint_url=endpoint,

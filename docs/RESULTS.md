@@ -56,4 +56,4 @@ Commit 7364b2c, `PAP_TEST_DATABASE_URL=... uv run pytest -m integration -s`. CI 
 | Redelivered message for a done job | 0 new chunks, attempts stays 1 |
 | Transient S3 error ×2 | done on attempt 3 |
 
-3 of 4 local runs green; the first failed (timeout, cause not captured). CI run: NOT MEASURED yet. Throughput with the real fastembed model: NOT MEASURED.
+First run on a fresh database lost one message: a migration race (fixed, ADR 003; repro 5/5 trials with UniqueViolation before, 0 after; regression test `test_concurrent_migrate_is_safe`). CI run after the fix: pending. Throughput with the real fastembed model: NOT MEASURED.
