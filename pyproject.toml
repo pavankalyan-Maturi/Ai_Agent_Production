@@ -16,6 +16,9 @@ dependencies = [
   "opentelemetry-sdk>=1.45,<1.46",
   "opentelemetry-exporter-otlp-proto-http>=1.45,<1.46",
   "opentelemetry-instrumentation-fastapi==0.66b2",
+  "pgvector>=0.5.1,<0.6",
+  "numpy>=2.3,<3",
+  "anthropic>=2.14,<3",
 ]
 
 [dependency-groups]
@@ -29,12 +32,17 @@ dev = [
   "pip-audit>=2.9",
 ]
 
+# Local CPU embedding + rerank models (ONNX). Used by the eval job and later by ingestion workers.
+eval = [
+  "fastembed>=0.9.1,<0.10",
+]
+
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
-packages = ["apps"]
+packages = ["apps", "retrieval", "evals"]
 
 [tool.ruff]
 line-length = 100
@@ -44,13 +52,23 @@ target-version = "py312"
 select = ["E", "F", "W", "I", "B", "UP", "S", "ASYNC", "RUF"]
 ignore = ["S101"]
 
+[tool.ruff.lint.per-file-ignores]
+# Eval harness: long table literals, seeded (non-crypto) sampling.
+"evals/**" = ["E501", "S311"]
+
 [tool.mypy]
 python_version = "3.12"
 strict = true
 plugins = ["pydantic.mypy"]
 
 [[tool.mypy.overrides]]
-module = ["opentelemetry.instrumentation.*"]
+module = ["evals.*"]
+disallow_untyped_defs = false
+disallow_any_generics = false
+disallow_incomplete_defs = false
+
+[[tool.mypy.overrides]]
+module = ["opentelemetry.instrumentation.*", "pgvector.*", "fastembed.*"]
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]
