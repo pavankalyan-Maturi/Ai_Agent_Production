@@ -33,14 +33,14 @@ docs/                SPEC, TASKS, handoff, RESULTS, COSTS, adr/, runbooks/
 | Python | 3.12 | installed |
 | FastAPI / Uvicorn / Pydantic / pydantic-settings | 0.165.x / 0.54.x / 2.13.x / 2.16.x | installed |
 | OpenTelemetry SDK + OTLP HTTP exporter | 1.45.x; instrumentation-fastapi 0.66b2 | installed |
-| OTel GenAI semconv | Development status; pin by commit in the Phase 2 ADR | planned |
+| OTel GenAI semconv | Development status; pin by commit when agent spans land (P2 PR B, ADR 004) | planned |
 | Postgres + pgvector | postgres 17 + pgvector 0.8.6 (`pgvector/pgvector:0.8.6-pg17`) | installed |
 | PgBouncer | 1.24.1 (transaction pooling, no prepared statements) | installed |
 | Redis | 7.4 | installed |
 | OTel Collector contrib / Prometheus / Grafana / Loki | 0.140.0 / 3.7.3 / 12.2.1 / 3.5.7 | installed |
 | Langfuse | v4 (image tag `4`, observed 4.88.0) + ClickHouse 25.12 | installed |
 | S3-compatible store | SeaweedFS 4.01 (MinIO images unavailable, ADR 001) | installed |
-| LangGraph | langgraph==1.2.24, checkpoint==4.3.2, checkpoint-postgres==3.2.1, prebuilt==1.1.3; psycopg 3 | planned P2 |
+| LangGraph | langgraph==1.2.24, checkpoint==4.3.2, checkpoint-postgres==3.2.1, prebuilt==1.1.3; psycopg 3 | installed (ADR 004) |
 | MCP | spec 2026-07-28 (stateless); `mcp[cli]==2.0.*` (MCPServer) | planned P3 |
 | A2A | spec 1.0; `a2a-sdk>=1.1,<2` | planned P3 |
 | LiteLLM proxy | newest stable >=1.97 at Phase 4 after a GHSA check; never 1.107.0; non-root; admin UI off | planned P4 |

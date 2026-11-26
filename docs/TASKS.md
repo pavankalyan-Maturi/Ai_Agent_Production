@@ -11,7 +11,7 @@ DONE requires the acceptance test to pass in CI (link it).
 Acceptance: CI green; compose-smoke boots obs and Langfuse /api/public/health returns OK and receives spans.
 
 ## Phase 1: Ingestion + hybrid retrieval  [CHECKPOINT: ablation table review]
-- P1.1 S3 upload -> RabbitMQ -> Celery ingest; retries, DLQ, idempotency key — IN REVIEW (PR B)
+- P1.1 S3 upload -> RabbitMQ -> Celery ingest; retries, DLQ, idempotency key — DONE (PR #3)
 - P1.2 chunker + contextual retrieval (prompt-cached, Haiku 5.5), embeddings via LiteLLM or local CPU model in CI — DONE (PR #2; contextual measured, no gain on SciFact, off by default)
 - P1.3 hybrid search: pgvector HNSW + Postgres FTS, RRF fusion, iterative scan for tenant filters — DONE (PR #2)
 - P1.4 reranker (small cross-encoder on CPU in CI) — DONE (PR #2)
@@ -19,9 +19,9 @@ Acceptance: CI green; compose-smoke boots obs and Langfuse /api/public/health re
 Acceptance: DLQ test, filtered-recall test, ablation row per config with CI link.
 
 ## Phase 2: Agent graph  [CHECKPOINT: memory ablation + budget policy review]
-- P2.1 LangGraph planner/executor; tools: search, fetch_doc, calculator
-- P2.2 AsyncPostgresSaver; crash-resume test
-- P2.3 budgets (steps, tokens, USD) + graceful degrade; HITL interrupt for flagged tools
+- P2.1 LangGraph planner/executor; tools: search, fetch_doc, calculator — IN REVIEW (PR A)
+- P2.2 AsyncPostgresSaver; crash-resume test — IN REVIEW (PR A)
+- P2.3 budgets (steps, tokens, USD) + graceful degrade; HITL interrupt for flagged tools — IN REVIEW (PR A)
 - P2.4 context compaction (tool-result truncation, summarize-at-threshold); token chart
 - P2.5 experience memory (ReasoningBank-style) + admission gate (replay with/without)
 - P2.6 grounded reflection only on external failure signals
