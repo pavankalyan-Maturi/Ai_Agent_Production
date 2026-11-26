@@ -148,6 +148,15 @@ class PgStore:
             ).fetchall()
         return [Hit(r[0], r[1], float(r[3]), r[2]) for r in rows]
 
+    def fetch_doc(self, tenant_id: str, doc_id: str) -> str | None:
+        """Reassemble one document from its chunks, in order. Tenant-scoped."""
+        with self._conn() as conn:
+            rows = conn.execute(
+                "SELECT content FROM chunks WHERE tenant_id = %s AND doc_id = %s ORDER BY ord",
+                (tenant_id, doc_id),
+            ).fetchall()
+        return "\n".join(r[0] for r in rows) if rows else None
+
     def delete_tenant(self, tenant_id: str) -> None:
         with self._conn() as conn:
             conn.execute("DELETE FROM chunks WHERE tenant_id = %s", (tenant_id,))

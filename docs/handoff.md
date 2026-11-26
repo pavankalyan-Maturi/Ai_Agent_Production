@@ -1,26 +1,30 @@
 # Handoff
 
 ## Done
-- Phase 0 merged (PR #1). Phase 1A merged (PR #2): retrieval core + SciFact ablation, ADR 002.
-- Phase 1B (this PR, not merged): S3 → RabbitMQ → Celery ingest in `apps/ingest/` (quorum queue + DLX → `ingest.dlq`, delivery limit 5, acks_late, full-jitter retries, poison → DLQ), idempotency ledger `ingest_jobs`, `POST /v1/ingest` (202, idempotent). Compose core profile gains rabbitmq, ingest-worker, s3. Dockerfile now ships `retrieval/` and fastembed. ADR 003.
+- Phases 0 and 1 merged (PR #1, #2, #3).
+- Phase 2 PR A (this PR, not merged): `agent/`, a LangGraph planner/executor.
+  - Tools: search, fetch_doc and calculator. The tenant comes from state.
+  - AsyncPostgresSaver checkpointing, with a crash-resume test.
+  - Step, token and USD budgets with a degraded partial answer.
+  - Approval pause (`interrupt`) for flagged tools.
+  - New `PgStore.fetch_doc`.
+  - ADR 004.
 
 ## Verified here
-- Gate: ruff, format, mypy strict, 37 unit tests; actionlint.
-- Integration (real RabbitMQ 4.2 + pgvector + moto S3 + in-process worker): DLQ 4/4, dedupe 10/10, redelivery no-op, retry ×2 → done. A fresh-DB migration race that lost a message was found by CI and fixed (ADR 003).
-- Image build stage: imports, task registered, `celery` binary present.
-
-## Verified in CI
-All 7 checks green on 251a7b5: lint-type-test, integration, smoke (compose core+obs incl. rabbitmq, worker healthy, s3), trivy-image, trivy-config, pip-audit, retrieval eval.
+- Gate: ruff, format, mypy (now including `agent`), 49 unit tests.
+- Integration against pgvector 0.8.6 (Postgres 17): kill/resume, HITL across savers, tenant-scoped tools. All passed.
+- Bench: 10/10 kill/resume trials, ≈2.2 ms checkpoint overhead per super-step (RESULTS Phase 2A).
 
 ## Not verified
-- Worker with the real fastembed model (needs HF access): you or CI.
+- `AnthropicModel` against the live API: no calls made. Planning quality with a real model: NOT MEASURED.
+- Checkpointer behind PgBouncer.
 
 ## Open
-- Stale chunks when a re-ingested document gets shorter (ADR 003).
-- Tenant from header until auth (Phase 5). Text only (no PDF/HTML extraction).
+- No checkpoint pruning. No HTTP endpoint for runs or approvals yet.
+- OTel GenAI semconv pin is deferred to PR B, when agent spans land.
 
 ## Next step
-Review and merge this PR. Then Phase 2 (LangGraph agent loop) on request.
+Review and merge PR A. Then Phase 2 PR B: P2.4 compaction + token chart, P2.5 experience memory + admission gate with the HotpotQA off/on/gated ablation, P2.6 grounded reflection.
 
 ## Versions pinned
-docs/SPEC.md Pins table, ADR 002, ADR 003 (rabbitmq 4.2, celery/kombu 5.7.x, boto3 1.44.x, moto 5.2.x).
+docs/SPEC.md Pins table, ADR 002-004 (langgraph 1.2.24, checkpoint 4.3.2, checkpoint-postgres 3.2.1, prebuilt 1.1.3).

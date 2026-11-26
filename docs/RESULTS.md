@@ -57,3 +57,23 @@ Commit 7364b2c, `PAP_TEST_DATABASE_URL=... uv run pytest -m integration -s`. CI 
 | Transient S3 error ×2 | done on attempt 3 |
 
 First run on a fresh database lost one message: a migration race (fixed, ADR 003; repro 5/5 trials with UniqueViolation before, 0 after; regression test `test_concurrent_migrate_is_safe`). CI ([integration, 251a7b5](https://github.com/pavankalyan-Maturi/Ai_Agent_Production/actions/runs/45902058992/job/140189945175), fresh DB + broker): 40 docs + 4 poison in 0.98 s (41 docs/s), DLQ 4/4, dedupe 10/10, retry ×2 → done on attempt 3; same run's filtered-ANN test recall@10 off 0.020 → on 0.830. Throughput with the real fastembed model: NOT MEASURED.
+
+## Phase 2A: agent loop, checkpointing, budgets, HITL
+
+`scripts/bench_agent.py -n 50 --kills 10`, local sandbox (4 vCPU), pgvector 0.8.6 container (Postgres 17), scripted model (no LLM: this measures the graph and the checkpointer). Each run is 10 calculator tool steps, which is 22 graph super-steps.
+
+| Metric | Value |
+|---|---|
+| Run latency, InMemorySaver, p50 | 19.8 ms |
+| Run latency, AsyncPostgresSaver, p50 / p95 | 67.8 / 81.5 ms |
+| Checkpoint overhead per super-step, p50 | ≈2.2 ms |
+| SIGKILL inside a tool step, then resume from Postgres | 10 / 10 finished with the correct answer |
+| Resume to completion (2 remaining steps), p50 / max | 23 / 30 ms |
+
+Tests (`tests/agent/`):
+- Kill and resume: the run resumes at `act`, steps 0-1 do not re-run, the killed step re-runs once (at-least-once), and the answer is correct.
+- HITL across two savers: no tool runs before approval, and the run resumes from a fresh connection.
+- Budgets: steps, tokens and USD (Sonnet 5.5 price) each stop after the 3rd call and return a marked partial answer.
+- Tenant: the tenant comes from state even when the model supplies one; `search` and `fetch_doc` never return another tenant's document.
+
+A real model's planning quality: NOT MEASURED (no live LLM calls in this PR). Integration numbers in CI: see the PR's `integration` job.
