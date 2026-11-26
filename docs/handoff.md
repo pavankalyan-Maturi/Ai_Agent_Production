@@ -11,7 +11,7 @@ pytest (11), ruff, mypy strict, actionlint, pip-audit, image build, full compose
 
 ## Not verified here (you or CI)
 - First GitHub Actions run of all three workflows (action tags, runner size for ClickHouse).
-- Trivy scans.
+- Trivy image scan with the apt-get upgrade fix: Debian mirrors are blocked in this sandbox, so only CI can confirm it.
 
 ## Open
 - MinIO replaced by SeaweedFS (ADR 001 §7). Say if you want MinIO back.

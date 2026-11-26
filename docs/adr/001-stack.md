@@ -32,7 +32,7 @@ PII off in traces, everything verifiable inside a CI runner.
    prefers MinIO from a source build.
 8. **Separate Redis for Langfuse.** Langfuse requires `noeviction`; the app's Redis will hold caches in Phase 4
    that should use an LRU policy. Sharing one instance would force the wrong policy on one side.
-9. **Container image: python:3.12-slim, uv-built venv, non-root user, HEALTHCHECK.** Optional proxy CA is a
+9. **Container image: python:3.12-slim + `apt-get upgrade` for Debian security fixes, uv-built venv, non-root user, HEALTHCHECK.** Optional proxy CA is a
    BuildKit secret, never a layer.
 
 ## Consequences
@@ -44,10 +44,9 @@ PII off in traces, everything verifiable inside a CI runner.
 ## Versions pinned here
 See SPEC.md Pins table (rows marked installed). GitHub Actions are pinned by major tag
 (`actions/checkout@v5`, `astral-sh/setup-uv@v7`, `docker/build-push-action@v6`,
-`aquasecurity/trivy-action@0.33.1`); **UNVERIFIED** that these tags exist until the first CI run. Pinning by SHA
+Trivy runs from the pinned `aquasec/trivy:0.69.3` image instead of trivy-action, whose guessed tag did not exist). Pinning by SHA
 is a follow-up.
 
 ## Not verified in this environment
 - GitHub Actions runs (first run happens on the PR).
-- Trivy image/config scan (Trivy not installed here).
 - Langfuse on a 2-vCPU private-repo runner; it booted in 25 s on a 4-vCPU/15 GB sandbox.

@@ -13,6 +13,8 @@ COPY apps ./apps
 RUN --mount=type=secret,id=extra_ca sh -c "$CA_SETUP; uv sync --frozen --no-dev"
 
 FROM python:3.12-slim
+# Pull Debian security fixes newer than the base image (Trivy gates HIGH/CRITICAL with a fix).
+RUN apt-get update -o APT::Update::Error-Mode=any && apt-get upgrade -y --no-install-recommends && rm -rf /var/lib/apt/lists/*
 RUN groupadd --system app && useradd --system --gid app --home /app app
 WORKDIR /app
 COPY --from=build --chown=app:app /app /app
