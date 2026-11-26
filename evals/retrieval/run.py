@@ -113,7 +113,7 @@ def main() -> None:
         cz = GroqContextualizer(
             DiskCache(a.ctx_cache),
             os.environ["GROQ_API_KEY"],
-            model=os.environ.get("GROQ_MODEL", "llama-3.1-8b-instant"),
+            model=os.environ.get("GROQ_MODEL") or "llama-3.1-8b-instant",
         )
         a.workers = min(a.workers, 2)  # free-tier RPM/TPM limits
     elif provider == "anthropic":
