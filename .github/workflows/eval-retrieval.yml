@@ -13,7 +13,7 @@ concurrency:
 jobs:
   retrieval:
     runs-on: ubuntu-24.04
-    timeout-minutes: 60
+    timeout-minutes: 80
     services:
       postgres:
         image: pgvector/pgvector:0.8.6-pg17
@@ -23,7 +23,9 @@ jobs:
           --health-cmd "pg_isready -U t" --health-interval 2s --health-retries 30
     env:
       FASTEMBED_CACHE_PATH: .cache/fastembed
+      # Contextual headers: Groq free tier by default, Claude if only ANTHROPIC_API_KEY is set.
       # Fork PRs get no secrets: contextual rows then report NOT MEASURED.
+      GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
       ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
     steps:
       - uses: actions/checkout@v5

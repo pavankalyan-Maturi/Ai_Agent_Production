@@ -113,3 +113,39 @@ def test_anthropic_contextualizer_caches_on_disk_and_marks_doc_cacheable(tmp_pat
     cz2.contextualize("the doc", chunks)
     assert len(fake.calls) == 2
     assert cz2.usage.cache_hits_local == 2
+
+
+def test_groq_contextualizer_retries_429_and_caches(tmp_path, monkeypatch) -> None:
+    import httpx2
+
+    from retrieval.contextual import ContextBudgetExceeded, GroqContextualizer
+
+    monkeypatch.setattr("time.sleep", lambda s: None)
+    calls = {"n": 0}
+
+    def handler(req: httpx2.Request) -> httpx2.Response:
+        calls["n"] += 1
+        assert req.headers["authorization"] == "Bearer k"
+        if calls["n"] == 1:
+            return httpx2.Response(429, headers={"retry-after": "1"})
+        return httpx2.Response(
+            200,
+            json={
+                "choices": [{"message": {"content": " ctx "}}],
+                "usage": {"prompt_tokens": 50, "completion_tokens": 5},
+            },
+        )
+
+    cz = GroqContextualizer(DiskCache(tmp_path / "c.jsonl"), api_key="k")
+    cz._http = httpx2.Client(
+        transport=httpx2.MockTransport(handler), headers={"Authorization": "Bearer k"}
+    )
+    chunks = chunk_document(doc("alpha beta gamma"))
+    assert cz.contextualize("alpha beta gamma", chunks)[0].context == "ctx"
+    assert calls["n"] == 2 and cz.usage.input_tokens == 50
+    cz.contextualize("alpha beta gamma", chunks)
+    assert calls["n"] == 2  # served from disk cache
+
+    late = GroqContextualizer(DiskCache(tmp_path / "d.jsonl"), api_key="k", deadline=0.0)
+    with pytest.raises(ContextBudgetExceeded):
+        late.contextualize("x y", chunk_document(doc("x y")))

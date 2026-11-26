@@ -1,9 +1,13 @@
 """Contextual retrieval (Anthropic, Sep 2024): prepend an LLM-written situating sentence to each
 chunk before embedding and FTS indexing.
 
-Cost controls: Haiku 5.5 at low effort, the document is the cached prefix shared by all of its
-chunks (min cacheable prefix on Haiku 5.5 is 512 tokens, so short documents won't cache), and a
-content-addressed on-disk cache so a corpus is only paid for once per prompt version.
+Two providers behind one interface, same prompt:
+- GroqContextualizer (default in CI): free tier, open-weight Llama. Rate-limited, so it honours
+  429 retry-after and the eval runs it against a time budget, resuming from the cache next run.
+- AnthropicContextualizer: Claude Haiku 5.5 at low effort, document as cached prefix (min cacheable
+  prefix 512 tokens, so short documents won't cache).
+Both write to a content-addressed disk cache keyed by (prompt version, model, doc, chunk), so a
+corpus is generated once per prompt version and model.
 """
 
 from __future__ import annotations
@@ -11,6 +15,7 @@ from __future__ import annotations
 import hashlib
 import json
 import threading
+import time
 from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Protocol
@@ -54,6 +59,10 @@ class MockContextualizer:
     def contextualize(self, doc_text: str, chunks: list[Chunk]) -> list[Chunk]:
         first = doc_text.split(". ")[0][:200]
         return [replace(c, context=f"From a document about: {first}") for c in chunks]
+
+
+class ContextBudgetExceeded(Exception):
+    """The time budget ran out; what was generated so far is in the cache."""
 
 
 class DiskCache:
@@ -129,6 +138,77 @@ class AnthropicContextualizer:
     def contextualize(self, doc_text: str, chunks: list[Chunk]) -> list[Chunk]:
         out = []
         # Sequential within a document so chunks 2..n can read the doc prefix from cache.
+        for c in chunks:
+            key = cache_key(self.model, doc_text, c.content)
+            ctx = self.cache.get(key)
+            if ctx is None:
+                ctx = self._call(doc_text, c.content)
+                self.cache.put(key, ctx)
+            else:
+                with self._lock:
+                    self.usage.cache_hits_local += 1
+            out.append(replace(c, context=ctx))
+        return out
+
+
+class GroqContextualizer:
+    """Groq's OpenAI-compatible chat completions endpoint, called over HTTP (no extra SDK)."""
+
+    URL = "https://api.groq.com/openai/v1/chat/completions"
+
+    def __init__(
+        self,
+        cache: DiskCache,
+        api_key: str,
+        model: str = "llama-3.1-8b-instant",
+        deadline: float | None = None,
+        max_tokens: int = 200,
+    ) -> None:
+        import httpx2
+
+        self._http = httpx2.Client(timeout=60, headers={"Authorization": f"Bearer {api_key}"})
+        self.model = model
+        self.name = f"groq:{model}:{PROMPT_VERSION}"
+        self.cache = cache
+        self.deadline = deadline  # time.monotonic() value; None = no budget
+        self.max_tokens = max_tokens
+        self.usage = Usage()
+        self._lock = threading.Lock()
+
+    def _call(self, doc_text: str, chunk_text: str) -> str:
+        body = {
+            "model": self.model,
+            "max_tokens": self.max_tokens,
+            "temperature": 0,
+            "messages": [
+                {
+                    "role": "user",
+                    "content": DOC_PROMPT.format(doc=doc_text)
+                    + "\n\n"
+                    + CHUNK_PROMPT.format(chunk=chunk_text),
+                }
+            ],
+        }
+        for attempt in range(8):
+            if self.deadline is not None and time.monotonic() > self.deadline:
+                raise ContextBudgetExceeded
+            r = self._http.post(self.URL, json=body)
+            if r.status_code == 429 or r.status_code >= 500:
+                wait = float(r.headers.get("retry-after", 2**attempt))
+                time.sleep(min(wait, 60))
+                continue
+            r.raise_for_status()
+            data = r.json()
+            u = data.get("usage", {})
+            with self._lock:
+                self.usage.calls += 1
+                self.usage.input_tokens += int(u.get("prompt_tokens", 0))
+                self.usage.output_tokens += int(u.get("completion_tokens", 0))
+            return str(data["choices"][0]["message"]["content"]).strip()
+        raise RuntimeError("Groq: retries exhausted")
+
+    def contextualize(self, doc_text: str, chunks: list[Chunk]) -> list[Chunk]:
+        out = []
         for c in chunks:
             key = cache_key(self.model, doc_text, c.content)
             ctx = self.cache.get(key)

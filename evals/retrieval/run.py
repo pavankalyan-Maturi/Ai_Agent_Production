@@ -3,8 +3,9 @@
     uv run python -m evals.retrieval.run --dsn postgresql://... --out results/retrieval
 
 Rungs: {naive, contextual} x {dense, hybrid (dense+FTS, RRF), hybrid+rerank}.
-Contextual rungs need ANTHROPIC_API_KEY; without it they are reported as NOT MEASURED,
-never silently replaced by the mock.
+Contextual rungs use GROQ_API_KEY (default, free tier) or ANTHROPIC_API_KEY. Without a key, or if
+the context-generation time budget runs out first, they are reported as NOT MEASURED and the
+partial contexts stay cached for the next run. Never silently replaced by the mock.
 """
 
 from __future__ import annotations
@@ -22,7 +23,13 @@ import numpy as np
 from evals.retrieval.metrics import bootstrap_ci, dedupe_docs, ndcg_at, recall_at
 from evals.retrieval.scifact import Slice, download, load_slice
 from retrieval.chunking import chunk_document
-from retrieval.contextual import AnthropicContextualizer, Contextualizer, DiskCache
+from retrieval.contextual import (
+    AnthropicContextualizer,
+    ContextBudgetExceeded,
+    Contextualizer,
+    DiskCache,
+    GroqContextualizer,
+)
 from retrieval.embedding import FastEmbedEmbedder
 from retrieval.pipeline import SearchConfig, index_chunks, search
 from retrieval.rerank import FastEmbedReranker
@@ -83,6 +90,8 @@ def main() -> None:
     ap.add_argument("--chunk-size", type=int, default=96)
     ap.add_argument("--overlap", type=int, default=16)
     ap.add_argument("--workers", type=int, default=8)
+    ap.add_argument("--context-provider", choices=["auto", "groq", "anthropic"], default="auto")
+    ap.add_argument("--context-budget-min", type=float, default=35.0)
     a = ap.parse_args()
 
     sl = load_slice(download(a.data), a.queries, a.corpus_size)
@@ -92,9 +101,24 @@ def main() -> None:
     store.migrate()
 
     variants: dict[str, Contextualizer | None] = {"naive": None}
-    cz: AnthropicContextualizer | None = None
-    if os.environ.get("ANTHROPIC_API_KEY"):
+    cz: AnthropicContextualizer | GroqContextualizer | None = None
+    provider = a.context_provider
+    if provider == "auto":
+        provider = (
+            "groq"
+            if os.environ.get("GROQ_API_KEY")
+            else ("anthropic" if os.environ.get("ANTHROPIC_API_KEY") else "none")
+        )
+    if provider == "groq":
+        cz = GroqContextualizer(
+            DiskCache(a.ctx_cache),
+            os.environ["GROQ_API_KEY"],
+            model=os.environ.get("GROQ_MODEL", "llama-3.1-8b-instant"),
+        )
+        a.workers = min(a.workers, 2)  # free-tier RPM/TPM limits
+    elif provider == "anthropic":
         cz = AnthropicContextualizer(DiskCache(a.ctx_cache))
+    if cz is not None:
         variants["contextual"] = cz
 
     report: dict = {
@@ -112,7 +136,21 @@ def main() -> None:
         tenant = f"eval-scifact-{variant}"
         store.delete_tenant(tenant)
         t = time.perf_counter()
-        chunks = build_chunks(sl, tenant, a.chunk_size, a.overlap, czr, a.workers)
+        if isinstance(czr, GroqContextualizer):
+            czr.deadline = time.monotonic() + a.context_budget_min * 60
+        try:
+            chunks = build_chunks(sl, tenant, a.chunk_size, a.overlap, czr, a.workers)
+        except ContextBudgetExceeded:
+            done = len(cz.cache._d) if cz else 0
+            report["rows"] += [
+                {
+                    "variant": variant,
+                    "retrieval": r,
+                    "status": f"NOT MEASURED: context budget hit, {done} contexts cached, rerun to resume",
+                }
+                for r, _ in RUNGS
+            ]
+            continue
         index_chunks(store, embedder, chunks)
         report[f"index_seconds_{variant}"] = round(time.perf_counter() - t, 1)
         report[f"chunks_{variant}"] = len(chunks)
@@ -121,23 +159,34 @@ def main() -> None:
             row.update(evaluate(store, embedder, reranker, sl, tenant, cfg))
             report["rows"].append(row)
             print(json.dumps(row))
+    if cz is not None:
+        report["context_model"] = cz.name
     if "contextual" not in variants:
         report["rows"] += [
             {
                 "variant": "contextual",
                 "retrieval": r,
-                "status": "NOT MEASURED: no ANTHROPIC_API_KEY",
+                "status": "NOT MEASURED: no GROQ_API_KEY or ANTHROPIC_API_KEY",
             }
             for r, _ in RUNGS
         ]
     if cz is not None:
         u = asdict(cz.usage)
-        u["est_cost_usd"] = round(
-            (u["input_tokens"] + u["cache_read_input_tokens"] + u["cache_creation_input_tokens"])
-            * HAIKU_IN
-            / 1e6
-            + u["output_tokens"] * HAIKU_OUT / 1e6,
-            4,
+        u["provider"] = provider
+        u["est_cost_usd"] = (
+            0.0
+            if provider == "groq"
+            else round(
+                (
+                    u["input_tokens"]
+                    + u["cache_read_input_tokens"]
+                    + u["cache_creation_input_tokens"]
+                )
+                * HAIKU_IN
+                / 1e6
+                + u["output_tokens"] * HAIKU_OUT / 1e6,
+                4,
+            )
         )
         report["contextual_usage"] = u
 
@@ -173,7 +222,9 @@ def to_markdown(r: dict) -> str:
         )
     if u := r.get("contextual_usage"):
         lines.append("")
-        lines.append(f"Contextual usage: {json.dumps(u)} (cost is an ESTIMATE at list price)")
+        lines.append(
+            f"Contextual usage: {json.dumps(u)} (cost is an ESTIMATE; Groq free tier = $0)"
+        )
     return "\n".join(lines)
 
 
