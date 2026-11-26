@@ -1,0 +1,58 @@
+name: eval-retrieval
+on:
+  workflow_dispatch:
+    inputs:
+      queries: {description: "SciFact test queries", default: "200"}
+      corpus_size: {description: "Docs in the slice (relevant + seeded distractors)", default: "1500"}
+  pull_request:
+    paths: ["retrieval/**", "evals/retrieval/**", ".github/workflows/eval-retrieval.yml"]
+permissions: {contents: read}
+concurrency:
+  group: eval-retrieval-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  retrieval:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 80
+    services:
+      postgres:
+        image: pgvector/pgvector:0.8.6-pg17
+        env: {POSTGRES_USER: t, POSTGRES_PASSWORD: t, POSTGRES_DB: t}
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U t" --health-interval 2s --health-retries 30
+    env:
+      FASTEMBED_CACHE_PATH: .cache/fastembed
+      # Contextual headers: Groq free tier by default, Claude if only ANTHROPIC_API_KEY is set.
+      # Fork PRs get no secrets: contextual rows then report NOT MEASURED.
+      GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+      GROQ_MODEL: ${{ vars.GROQ_MODEL }}
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: astral-sh/setup-uv@v7
+        with: {version: "0.11.32", enable-cache: true}
+      - run: uv sync --frozen --python 3.12 --all-groups
+      - name: Cache dataset and models
+        uses: actions/cache@v4
+        with:
+          path: |
+            .cache/beir
+            .cache/fastembed
+          key: beir-scifact-fastembed-v1
+      - name: Cache generated chunk contexts (pay once per prompt version)
+        uses: actions/cache@v4
+        with:
+          path: .cache/contexts
+          # Entries are content-addressed (prompt version, model, doc, chunk), so one rolling cache is safe.
+          key: contexts-${{ github.run_id }}
+          restore-keys: contexts-
+      - name: Run ablation
+        run: >-
+          uv run python -m evals.retrieval.run
+          --dsn postgresql://t:t@localhost:5432/t
+          --queries ${{ inputs.queries || '200' }}
+          --corpus-size ${{ inputs.corpus_size || '1500' }}
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with: {name: retrieval-ablation, path: results/retrieval}

@@ -1,25 +1,23 @@
 # Handoff
 
-## Done (Phase 0, PR open, not merged)
-- FastAPI skeleton with app factory; /healthz, /readyz (PG via PgBouncer + Redis, timeouts, 503), /metrics, /v1/ping.
-- OTel tracing (OTLP/HTTP) and Prometheus metrics with route-template labels; PII content attributes stripped at the collector.
-- Compose profiles core / obs / llmobs / full; Grafana dashboard provisioned; Langfuse v4 receives spans.
-- CI: ci.yml, compose-smoke.yml, security.yml. Docs: SPEC, TASKS, CLAUDE.md, ADR 001, RESULTS, COSTS.
+## Done
+- Phase 0 merged (PR #1).
+- Phase 1A (PR #2, draft, not merged): retrieval core in `retrieval/` (chunker, embedder, PgStore with HNSW + FTS + iterative scan, RRF, cross-encoder rerank, contextual headers via Groq or Claude Haiku 5.5 with disk cache), SciFact ablation in `evals/retrieval/`, CI workflow `eval-retrieval.yml`. ADR 002. Numbers in RESULTS, Phase 1A.
 
-## Verified here
-pytest (11), ruff, mypy strict, actionlint, pip-audit, image build, full compose boot and smoke script incl. Langfuse.
+## Verified
+- Gate locally: ruff, format, mypy strict, 28 unit tests; integration tests against local pgvector (filtered recall off 0.015 → on 0.845).
+- CI eval run #12: all six ablation rows measured on 200 queries, 1500 docs. Contextual (Haiku 5.5) gave no gain on SciFact (RESULTS, ADR 002).
 
-## Not verified here (you or CI)
-- First GitHub Actions run of all three workflows (action tags, runner size for ClickHouse).
-- Trivy image scan with the apt-get upgrade fix: Debian mirrors are blocked in this sandbox, so only CI can confirm it.
+## Not verified
+- Groq path never completed a full run (free tier 8k TPM); its quota handling is unit-tested only.
+- Haiku actual billing not read; $0.67 is computed from usage.
+- This sandbox cannot reach Hugging Face, Groq or Anthropic; CI is the only verifier for downloads and providers.
 
 ## Open
-- MinIO replaced by SeaweedFS (ADR 001 §7). Say if you want MinIO back.
-- Actions pinned by tag, not SHA.
+- PR B (P1.1): S3 → RabbitMQ → Celery ingest with retries, DLQ, idempotency key. Not started.
 
 ## Next step
-Review and merge the Phase 0 PR, then send: **"Run Phase 1"** (ingestion, contextual retrieval, hybrid search, rerank, SciFact ablation).
-Phase 1 will need an Anthropic API key as an environment network secret for contextual chunk headers (Haiku 5.5, prompt-cached); CI will use the mock model.
+Review and merge PR #2. Then PR B (P1.1 ingest) on the same branch, restarted from main.
 
 ## Versions pinned
-See docs/SPEC.md Pins table.
+docs/SPEC.md Pins table, plus ADR 002 (pgvector 0.8.6, pgvector-python 0.5.1, fastembed 0.9.1, anthropic 2.14, prompt v2).

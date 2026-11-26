@@ -5,7 +5,7 @@ If they disagree or are missing, stop and ask.
 
 ## Commands
 - Install: `uv sync --frozen`
-- Gate (must be green before push): `uv run ruff check . && uv run ruff format --check . && uv run mypy apps && uv run pytest -q`
+- Gate (must be green before push): `uv run ruff check . && uv run ruff format --check . && uv run mypy apps retrieval evals && uv run pytest -q`
 - Stack: `docker build -t pap-api:dev . && scripts/compose_smoke.sh [--llmobs]`
 - Probe latency: `uv run python scripts/bench_probes.py -n 1000`
 
