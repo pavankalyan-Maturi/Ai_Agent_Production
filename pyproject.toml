@@ -19,6 +19,8 @@ dependencies = [
   "pgvector>=0.5.1,<0.6",
   "numpy>=2.3,<3",
   "anthropic>=2.14,<3",
+  "celery>=5.7,<5.8",
+  "boto3>=1.44,<1.45",
 ]
 
 [dependency-groups]
@@ -30,6 +32,8 @@ dev = [
   "mypy>=1.18",
   "pre-commit>=4",
   "pip-audit>=2.9",
+  "moto[server]>=5.2,<6",
+  "boto3-stubs[s3]>=1.44",
 ]
 
 # Local CPU embedding + rerank models (ONNX). Used by the eval job and later by ingestion workers.
@@ -68,8 +72,15 @@ disallow_any_generics = false
 disallow_incomplete_defs = false
 
 [[tool.mypy.overrides]]
-module = ["opentelemetry.instrumentation.*", "pgvector.*", "fastembed.*"]
+module = ["opentelemetry.instrumentation.*", "pgvector.*", "fastembed.*", "celery.*", "kombu.*", "moto.*"]
 ignore_missing_imports = true
+follow_untyped_imports = false
+
+[[tool.mypy.overrides]]
+# Celery and kombu ship no type information.
+module = ["apps.ingest.*"]
+disallow_untyped_calls = false
+disallow_untyped_decorators = false
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

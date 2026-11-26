@@ -5,13 +5,14 @@ from __future__ import annotations
 import time
 from collections.abc import AsyncIterator, Awaitable, Callable
 from contextlib import asynccontextmanager
+from typing import Any
 
 from fastapi import FastAPI, Request, Response
 from opentelemetry.sdk.trace import TracerProvider
 from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 from starlette.routing import Match
 
-from apps.api import health
+from apps.api import health, ingest
 from apps.api.settings import Settings, get_settings
 from apps.api.telemetry import HTTP_LATENCY, HTTP_REQUESTS, build_tracer_provider, instrument
 
@@ -25,10 +26,28 @@ def _route_template(request: Request) -> str:
     return "unmatched"
 
 
+def _default_ingest_deps(settings: Settings) -> Callable[[], tuple[Any, Any]]:
+    """Lazily build the Celery producer and job ledger on first ingest request."""
+    cache: list[tuple[Any, Any]] = []
+
+    def get() -> tuple[Any, Any]:
+        if not cache:
+            from apps.ingest.celery_app import make_app
+            from apps.ingest.jobs import JobStore
+
+            jobs = JobStore(str(settings.database_url))
+            jobs.migrate()
+            cache.append((make_app(settings), jobs))
+        return cache[0]
+
+    return get
+
+
 def create_app(
     settings: Settings | None = None,
     tracer_provider: TracerProvider | None = None,
     readiness_checks: dict[str, health.Check] | None = None,
+    ingest_deps: Callable[[], tuple[Any, Any]] | None = None,
 ) -> FastAPI:
     settings = settings or get_settings()
     provider = tracer_provider or build_tracer_provider(settings)
@@ -44,6 +63,8 @@ def create_app(
         health.DEFAULT_CHECKS if readiness_checks is None else readiness_checks
     )
     app.include_router(health.router)
+    app.include_router(ingest.router)
+    app.state.ingest_deps = ingest_deps or _default_ingest_deps(settings)
 
     @app.middleware("http")
     async def prometheus_mw(

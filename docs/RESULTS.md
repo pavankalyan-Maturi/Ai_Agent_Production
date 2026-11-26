@@ -43,3 +43,17 @@ Filtered ANN (tenant filter on a shared HNSW index), `tests/retrieval/test_store
 | `hnsw.iterative_scan=relaxed_order`, ef_search 100, max_scan_tuples 20000 | 0.845 | 10 of 10 |
 
 Commit 7364b2c, `PAP_TEST_DATABASE_URL=... uv run pytest -m integration -s`. CI asserts on ≥ 0.75, off < 0.2.
+
+## Phase 1B: ingestion
+
+`tests/ingest/test_ingest_integration.py`, local sandbox (4 vCPU), RabbitMQ 4.2 + pgvector 0.8.6 containers, S3 = moto server, in-process Celery worker (threads, concurrency 4), hash embedder (so this measures the pipeline, not embedding). Command: `PAP_TEST_DATABASE_URL=... PAP_TEST_BROKER_URL=... uv run pytest -m integration tests/ingest -s`.
+
+| Metric | Value |
+|---|---|
+| 40 docs (300 words each) + 4 poison, enqueue → all jobs terminal | 1.56-1.64 s (≈25 docs/s), 160 chunks |
+| Poison docs in `ingest.dlq` | 4 / 4 (binary, empty, oversize, missing) |
+| Duplicate enqueues suppressed | 10 / 10 |
+| Redelivered message for a done job | 0 new chunks, attempts stays 1 |
+| Transient S3 error ×2 | done on attempt 3 |
+
+3 of 4 local runs green; the first failed (timeout, cause not captured). CI run: NOT MEASURED yet. Throughput with the real fastembed model: NOT MEASURED.

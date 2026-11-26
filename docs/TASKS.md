@@ -11,11 +11,11 @@ DONE requires the acceptance test to pass in CI (link it).
 Acceptance: CI green; compose-smoke boots obs and Langfuse /api/public/health returns OK and receives spans.
 
 ## Phase 1: Ingestion + hybrid retrieval  [CHECKPOINT: ablation table review]
-- P1.1 S3 upload -> RabbitMQ -> Celery ingest; retries, DLQ, idempotency key — TODO
-- P1.2 chunker + contextual retrieval (prompt-cached, Haiku 5.5), embeddings via LiteLLM or local CPU model in CI — IN REVIEW (PR #2; contextual measured, no gain on SciFact, off by default)
-- P1.3 hybrid search: pgvector HNSW + Postgres FTS, RRF fusion, iterative scan for tenant filters — IN REVIEW (PR #2)
-- P1.4 reranker (small cross-encoder on CPU in CI) — IN REVIEW (PR #2)
-- P1.5 evals/retrieval: BEIR SciFact slice; ablation ladder -> RESULTS.md — IN REVIEW (PR #2)
+- P1.1 S3 upload -> RabbitMQ -> Celery ingest; retries, DLQ, idempotency key — IN REVIEW (PR B)
+- P1.2 chunker + contextual retrieval (prompt-cached, Haiku 5.5), embeddings via LiteLLM or local CPU model in CI — DONE (PR #2; contextual measured, no gain on SciFact, off by default)
+- P1.3 hybrid search: pgvector HNSW + Postgres FTS, RRF fusion, iterative scan for tenant filters — DONE (PR #2)
+- P1.4 reranker (small cross-encoder on CPU in CI) — DONE (PR #2)
+- P1.5 evals/retrieval: BEIR SciFact slice; ablation ladder -> RESULTS.md — DONE (PR #2)
 Acceptance: DLQ test, filtered-recall test, ablation row per config with CI link.
 
 ## Phase 2: Agent graph  [CHECKPOINT: memory ablation + budget policy review]
