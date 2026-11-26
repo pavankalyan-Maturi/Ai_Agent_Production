@@ -149,7 +149,17 @@ services:
     profiles: [llmobs, full]
     depends_on:
       s3: {condition: service_healthy}
-    entrypoint: ["/bin/sh", "-c", "echo 's3.bucket.create -name langfuse' | weed shell -master=s3:9333"]
+    # weed shell exits 0 even when the filer is not up yet, so verify the bucket exists and retry.
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        for i in $$(seq 60); do
+          echo 's3.bucket.create -name langfuse' | weed shell -master=s3:9333 >/dev/null 2>&1
+          echo 's3.bucket.list' | weed shell -master=s3:9333 2>/dev/null | grep -q langfuse && { echo bucket langfuse ready; exit 0; }
+          sleep 2
+        done
+        echo 'bucket langfuse not created'; exit 1
     restart: "no"
 
   langfuse-worker: &langfuse
