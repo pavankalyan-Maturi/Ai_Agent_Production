@@ -149,3 +149,22 @@ def test_groq_contextualizer_retries_429_and_caches(tmp_path, monkeypatch) -> No
     late = GroqContextualizer(DiskCache(tmp_path / "d.jsonl"), api_key="k", deadline=0.0)
     with pytest.raises(ContextBudgetExceeded):
         late.contextualize("x y", chunk_document(doc("x y")))
+
+
+def test_groq_resolve_model_falls_back_when_preferred_is_retired() -> None:
+    import httpx2
+    import pytest
+
+    from retrieval.contextual import GroqContextualizer
+
+    def models(ids: list[str]) -> httpx2.MockTransport:
+        data = {"data": [{"id": i, "active": True} for i in ids]}
+        return httpx2.MockTransport(lambda req: httpx2.Response(200, json=data))
+
+    pick = GroqContextualizer.resolve_model
+    assert pick("k", "x-model", models(["x-model", "llama-3.1-8b-instant"])) == "x-model"
+    assert pick("k", "gone", models(["whisper", "llama-3.3-70b-versatile"])) == (
+        "llama-3.3-70b-versatile"
+    )
+    with pytest.raises(RuntimeError, match="none of"):
+        pick("k", "gone", models(["whisper-large-v3"]))

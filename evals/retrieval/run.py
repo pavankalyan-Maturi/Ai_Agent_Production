@@ -109,12 +109,17 @@ def main() -> None:
             if os.environ.get("GROQ_API_KEY")
             else ("anthropic" if os.environ.get("ANTHROPIC_API_KEY") else "none")
         )
+    ctx_error = ""
     if provider == "groq":
-        cz = GroqContextualizer(
-            DiskCache(a.ctx_cache),
-            os.environ["GROQ_API_KEY"],
-            model=os.environ.get("GROQ_MODEL") or "llama-3.1-8b-instant",
-        )
+        key = os.environ["GROQ_API_KEY"]
+        try:
+            model = GroqContextualizer.resolve_model(
+                key, os.environ.get("GROQ_MODEL") or "llama-3.1-8b-instant"
+            )
+            print(f"groq model: {model}", flush=True)
+            cz = GroqContextualizer(DiskCache(a.ctx_cache), key, model=model)
+        except Exception as e:  # report, keep the naive rows
+            ctx_error = f"{type(e).__name__}: {e}"[:300]
         a.workers = min(a.workers, 2)  # free-tier RPM/TPM limits
     elif provider == "anthropic":
         cz = AnthropicContextualizer(DiskCache(a.ctx_cache))
@@ -142,14 +147,15 @@ def main() -> None:
             chunks = build_chunks(sl, tenant, a.chunk_size, a.overlap, czr, a.workers)
         except ContextBudgetExceeded:
             done = len(cz.cache._d) if cz else 0
-            report["rows"] += [
-                {
-                    "variant": variant,
-                    "retrieval": r,
-                    "status": f"NOT MEASURED: context budget hit, {done} contexts cached, rerun to resume",
-                }
-                for r, _ in RUNGS
-            ]
+            report["rows"] += _unmeasured(
+                variant, f"context budget hit, {done} contexts cached, rerun to resume"
+            )
+            continue
+        except Exception as e:  # provider failure must not discard the naive rows
+            if czr is None:
+                raise
+            report["rows"] += _unmeasured(variant, f"{type(e).__name__}: {e}"[:300])
+            print(f"::warning::contextual variant failed: {e}"[:400], flush=True)
             continue
         index_chunks(store, embedder, chunks)
         report[f"index_seconds_{variant}"] = round(time.perf_counter() - t, 1)
@@ -162,14 +168,9 @@ def main() -> None:
     if cz is not None:
         report["context_model"] = cz.name
     if "contextual" not in variants:
-        report["rows"] += [
-            {
-                "variant": "contextual",
-                "retrieval": r,
-                "status": "NOT MEASURED: no GROQ_API_KEY or ANTHROPIC_API_KEY",
-            }
-            for r, _ in RUNGS
-        ]
+        report["rows"] += _unmeasured(
+            "contextual", ctx_error or "no GROQ_API_KEY or ANTHROPIC_API_KEY"
+        )
     if cz is not None:
         u = asdict(cz.usage)
         u["provider"] = provider
@@ -198,6 +199,12 @@ def main() -> None:
     if summary := os.environ.get("GITHUB_STEP_SUMMARY"):
         with open(summary, "a") as f:
             f.write(md + "\n")
+
+
+def _unmeasured(variant: str, why: str) -> list[dict]:
+    return [
+        {"variant": variant, "retrieval": r, "status": f"NOT MEASURED: {why}"} for r, _ in RUNGS
+    ]
 
 
 def to_markdown(r: dict) -> str:

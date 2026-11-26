@@ -155,6 +155,30 @@ class GroqContextualizer:
     """Groq's OpenAI-compatible chat completions endpoint, called over HTTP (no extra SDK)."""
 
     URL = "https://api.groq.com/openai/v1/chat/completions"
+    MODELS_URL = "https://api.groq.com/openai/v1/models"
+    # Groq retires models often; non-reasoning models first so max_tokens goes to the answer.
+    FALLBACKS = (
+        "llama-3.1-8b-instant",
+        "llama-3.3-70b-versatile",
+        "meta-llama/llama-4-scout-17b-16e-instruct",
+        "openai/gpt-oss-20b",
+    )
+
+    @classmethod
+    def resolve_model(cls, api_key: str, preferred: str, transport: object = None) -> str:
+        """Return `preferred` if the account can use it, else the first available fallback."""
+        import httpx2
+
+        kw = {"transport": transport} if transport is not None else {}
+        with httpx2.Client(timeout=30, **kw) as http:  # type: ignore[arg-type]
+            r = http.get(cls.MODELS_URL, headers={"Authorization": f"Bearer {api_key}"})
+        if r.is_error:
+            raise RuntimeError(f"Groq models {r.status_code}: {r.text[:300]}")
+        ids = {m["id"] for m in r.json().get("data", []) if m.get("active", True)}
+        for m in (preferred, *cls.FALLBACKS):
+            if m in ids:
+                return m
+        raise RuntimeError(f"Groq: none of {[preferred, *cls.FALLBACKS]} in {sorted(ids)}")
 
     def __init__(
         self,
@@ -197,7 +221,8 @@ class GroqContextualizer:
                 wait = float(r.headers.get("retry-after", 2**attempt))
                 time.sleep(min(wait, 60))
                 continue
-            r.raise_for_status()
+            if r.is_error:
+                raise RuntimeError(f"Groq {r.status_code}: {r.text[:300]}")
             data = r.json()
             u = data.get("usage", {})
             with self._lock:
