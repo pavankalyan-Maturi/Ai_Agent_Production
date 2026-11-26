@@ -104,10 +104,11 @@ def main() -> None:
     cz: AnthropicContextualizer | GroqContextualizer | None = None
     provider = a.context_provider
     if provider == "auto":
+        # Haiku first when both keys exist: Groq's free tier needs many runs (ADR 002).
         provider = (
-            "groq"
-            if os.environ.get("GROQ_API_KEY")
-            else ("anthropic" if os.environ.get("ANTHROPIC_API_KEY") else "none")
+            "anthropic"
+            if os.environ.get("ANTHROPIC_API_KEY")
+            else ("groq" if os.environ.get("GROQ_API_KEY") else "none")
         )
     ctx_error = ""
     if provider == "groq":

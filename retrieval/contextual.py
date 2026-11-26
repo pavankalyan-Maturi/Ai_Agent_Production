@@ -110,6 +110,8 @@ class AnthropicContextualizer:
         resp = self._client.messages.create(
             model=self.model,
             max_tokens=self.max_tokens,
+            # Short context per chunk: no thinking (Haiku 5.5 allows disabled at effort <= high).
+            thinking={"type": "disabled"},
             output_config={"effort": "low"},
             messages=[
                 {
