@@ -20,16 +20,20 @@ Every number has: commit, environment, command. NOT MEASURED means exactly that.
 
 SciFact slice: BEIR SciFact test (files from the `mteb/scifact` Hugging Face mirror), first 200 queries by id, 1500 docs = all relevant docs + seeded (13) distractors. Chunks 96 words / 16 overlap. Embedder `BAAI/bge-small-en-v1.5` (384-d), reranker `Xenova/ms-marco-MiniLM-L-6-v2`, both CPU via fastembed. FTS is Postgres `ts_rank_cd`, not BM25. Doc-level metrics, bootstrap 95% CIs. Latency is end-to-end per query on a GitHub-hosted runner (shared CPU, noisy).
 
-Run: [eval-retrieval #8](https://github.com/pavankalyan-Maturi/Ai_Agent_Production/actions/runs/45890109396), commit 579a163, `uv run python -m evals.retrieval.run --queries 200 --corpus-size 1500`.
+Run: [eval-retrieval #12, attempt 2](https://github.com/pavankalyan-Maturi/Ai_Agent_Production/actions/runs/45894089753), commit 7b13dc9, `uv run python -m evals.retrieval.run --queries 200 --corpus-size 1500` (naive rows identical to run #8 at 579a163). Contextual headers: `claude-haiku-5-5`, effort low, thinking off, prompt v2.
 
 | Variant | Retrieval | Recall@20 [95% CI] | Failure@20 | nDCG@10 [95% CI] | p50 / p95 ms |
 |---|---|---|---|---|---|
-| naive | dense | 0.925 [0.890, 0.958] | 0.075 | 0.796 [0.748, 0.837] | 36 / 43 |
-| naive | hybrid (RRF k=60) | 0.939 [0.906, 0.969] | 0.061 | 0.776 [0.729, 0.819] | 66 / 107 |
-| naive | hybrid + rerank (50 → 20) | 0.947 [0.917, 0.974] | 0.053 | 0.808 [0.764, 0.848] | 1401 / 2602 |
-| contextual | all three | NOT MEASURED: Groq free tier hit its quota after 23 calls (see ADR 002) | | | |
+| naive | dense | 0.925 [0.890, 0.958] | 0.075 | 0.796 [0.748, 0.837] | 54 / 64 |
+| naive | hybrid (RRF k=60) | 0.939 [0.906, 0.969] | 0.061 | 0.776 [0.729, 0.819] | 84 / 122 |
+| naive | hybrid + rerank (50 → 20) | 0.947 [0.917, 0.974] | 0.053 | 0.808 [0.764, 0.848] | 1767 / 2825 |
+| contextual | dense | 0.905 [0.864, 0.943] | 0.095 | 0.797 [0.748, 0.839] | 31 / 45 |
+| contextual | hybrid | 0.927 [0.892, 0.959] | 0.073 | 0.792 [0.746, 0.836] | 81 / 124 |
+| contextual | hybrid + rerank | 0.942 [0.910, 0.972] | 0.058 | 0.805 [0.761, 0.846] | 1729 / 2790 |
 
-Reading: the CIs overlap; on this slice hybrid and rerank are not significantly better than dense. Rerank costs ~20x latency on CPU. Hybrid lowers nDCG@10 slightly while raising recall@20.
+Contextual generation: 4,522 Haiku calls, 2.11M uncached input, 0.44M cache-write, 1.49M cache-read, 0.53M output tokens; est. $0.67 (ESTIMATE, from usage at list price; actual billing not read).
+
+Reading: every CI overlaps. Contextual headers did not help on SciFact: recall@20 is 0.012-0.020 lower in each rung, nDCG@10 flat (not significant either way). Likely cause (UNVERIFIED): SciFact docs are single short abstracts with the title already prepended to every chunk, so the extra context adds little and dilutes the 384-d embedding. Hybrid and rerank are not significantly better than dense; rerank costs ~20-30x latency on CPU.
 
 Filtered ANN (tenant filter on a shared HNSW index), `tests/retrieval/test_store_integration.py`, local sandbox, pgvector 0.8.6, 20k rows big tenant + 200 rows small tenant, k=10:
 

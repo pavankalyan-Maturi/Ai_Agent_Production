@@ -6,19 +6,18 @@
 
 ## Verified
 - Gate locally: ruff, format, mypy strict, 28 unit tests; integration tests against local pgvector (filtered recall off 0.015 → on 0.845).
-- CI eval run #8: naive dense / hybrid / hybrid+rerank measured on 200 queries, 1500 docs.
+- CI eval run #12: all six ablation rows measured on 200 queries, 1500 docs. Contextual (Haiku 5.5) gave no gain on SciFact (RESULTS, ADR 002).
 
 ## Not verified
-- Contextual rows: NOT MEASURED. Groq free tier 404'd on llama-3.1-8b-instant, then hit 429s after 23 calls on openai/gpt-oss-20b. Quota handling (stop + resume from cache) is unit-tested only until the next CI run.
-- Anthropic path never called a real API here (no key).
+- Groq path never completed a full run (free tier 8k TPM); its quota handling is unit-tested only.
+- Haiku actual billing not read; $0.67 is computed from usage.
 - This sandbox cannot reach Hugging Face, Groq or Anthropic; CI is the only verifier for downloads and providers.
 
 ## Open
-- Decision pending with the user: Haiku (~$0.50, ESTIMATE) vs Groq over several days vs smaller slice vs skip, for contextual rows.
 - PR B (P1.1): S3 → RabbitMQ → Celery ingest with retries, DLQ, idempotency key. Not started.
 
 ## Next step
-Get the contextual decision, fill the contextual rows, mark PR #2 ready. Then PR B on a new branch after PR #2 merges.
+Review and merge PR #2. Then PR B (P1.1 ingest) on the same branch, restarted from main.
 
 ## Versions pinned
 docs/SPEC.md Pins table, plus ADR 002 (pgvector 0.8.6, pgvector-python 0.5.1, fastembed 0.9.1, anthropic 2.14, prompt v2).

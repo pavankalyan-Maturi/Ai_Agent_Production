@@ -1,6 +1,6 @@
 # ADR 002: Retrieval stack (Phase 1A)
 
-Status: accepted for Phase 1A, contextual rows pending. Date: 2026-11-26.
+Status: accepted for Phase 1A. Date: 2026-11-26.
 
 ## Decision
 
@@ -14,7 +14,9 @@ Status: accepted for Phase 1A, contextual rows pending. Date: 2026-11-26.
 
 ## Measured
 
-See RESULTS, Phase 1A. Dense 0.925, hybrid 0.939, hybrid+rerank 0.947 recall@20; CIs overlap.
+See RESULTS, Phase 1A. Naive: dense 0.925, hybrid 0.939, hybrid+rerank 0.947 recall@20. Contextual (Haiku 5.5): 0.905 / 0.927 / 0.942. All CIs overlap.
+
+Consequence: contextual headers stay in the codebase as an ingest option, **off by default**. They earn their cost only on corpora of long, multi-section documents where chunks lose their referent; SciFact is not that. Re-test on the Phase 2+ corpus before enabling. Hybrid stays on (cheap, no measured harm, protects exact-term queries); rerank stays per-request.
 
 ## Groq free tier
 
