@@ -190,3 +190,23 @@ def test_groq_daily_quota_stops_with_budget_exceeded(tmp_path, monkeypatch) -> N
     with pytest.raises(ContextBudgetExceeded, match="quota"):
         cz.contextualize("alpha", chunk_document(doc("alpha")))
     assert b'"reasoning_effort":"low"' in seen["body"].replace(b" ", b"")
+
+
+def test_groq_waits_out_per_minute_429s_and_redacts_org(tmp_path, monkeypatch) -> None:
+    import httpx2
+
+    from retrieval.contextual import GroqContextualizer, _redact
+
+    monkeypatch.setattr("time.sleep", lambda s: None)
+    n = {"c": 0}
+
+    def handler(req: httpx2.Request) -> httpx2.Response:
+        n["c"] += 1
+        if n["c"] <= 12:  # more than the old 8-attempt cap
+            return httpx2.Response(429, headers={"retry-after": "4"}, text="TPM org_abc123")
+        return httpx2.Response(200, json={"choices": [{"message": {"content": "ok"}}]})
+
+    cz = GroqContextualizer(DiskCache(tmp_path / "c.jsonl"), api_key="k")
+    cz._http = httpx2.Client(transport=httpx2.MockTransport(handler))
+    assert cz.contextualize("alpha", chunk_document(doc("alpha")))[0].context == "ok"
+    assert _redact("in organization `org_01khat` tier") == "in organization `org_***` tier"

@@ -18,7 +18,7 @@ See RESULTS, Phase 1A. Dense 0.925, hybrid 0.939, hybrid+rerank 0.947 recall@20;
 
 ## Groq free tier
 
-The default model `llama-3.1-8b-instant` returned 404 to this account; the code now resolves a model against `/openai/v1/models` (got `openai/gpt-oss-20b`). That run stopped after 23 calls on 429s. The slice needs roughly 4,500 calls (≈3 chunks × 1500 docs, ESTIMATE). Groq free quotas are UNVERIFIED here; 429s with a long retry-after now stop the run cleanly and the cache resumes next time.
+The default model `llama-3.1-8b-instant` returned 404 to this account; the code now resolves a model against `/openai/v1/models` (got `openai/gpt-oss-20b`). That run stopped after 23 calls on 429s. The slice needs roughly 4,500 calls (≈3 chunks × 1500 docs, ESTIMATE). Run #10 showed the binding limit: 8,000 tokens per minute on `openai/gpt-oss-20b` (on_demand tier), about 10 calls a minute at ~750 tokens each, so the full slice needs roughly 7-8 hours of calls (ESTIMATE) across several 35-minute CI budgets. Per-minute 429s now wait (bounded by the run's deadline); 429s with a long retry-after are treated as a daily cap and stop cleanly, and the cache resumes next run. A daily token cap is UNVERIFIED. Provider error bodies are redacted of `org_` ids before logging.
 
 ## Rejected
 

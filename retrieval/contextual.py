@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 import threading
 import time
 from dataclasses import dataclass, replace
@@ -151,6 +152,11 @@ class AnthropicContextualizer:
         return out
 
 
+def _redact(text: str) -> str:
+    """Drop account identifiers from provider error bodies before they reach CI logs."""
+    return re.sub(r"org_[A-Za-z0-9]+", "org_***", text)
+
+
 class GroqContextualizer:
     """Groq's OpenAI-compatible chat completions endpoint, called over HTTP (no extra SDK)."""
 
@@ -219,20 +225,23 @@ class GroqContextualizer:
             body["include_reasoning"] = False
             body["max_tokens"] = self.max_tokens + 300
         last = ""
-        for attempt in range(8):
+        errors = 0  # 5xx only; per-minute 429s just wait, bounded by the deadline
+        while errors < 8:
             if self.deadline is not None and time.monotonic() > self.deadline:
-                raise ContextBudgetExceeded("deadline")
+                raise ContextBudgetExceeded(f"deadline; last: {last}")
             r = self._http.post(self.URL, json=body)
             if r.status_code == 429 or r.status_code >= 500:
-                wait = float(r.headers.get("retry-after", 2**attempt))
-                last = f"{r.status_code} retry-after={wait:.0f}s {r.text[:200]}"
+                wait = float(r.headers.get("retry-after", 2**errors))
+                last = f"{r.status_code} retry-after={wait:.0f}s {_redact(r.text[:200])}"
                 if r.status_code == 429 and wait > 120:
                     # Daily quota, not a per-minute limit: stop; the disk cache resumes next run.
                     raise ContextBudgetExceeded(f"Groq quota: {last}")
+                if r.status_code >= 500:
+                    errors += 1
                 time.sleep(min(wait, 60))
                 continue
             if r.is_error:
-                raise RuntimeError(f"Groq {r.status_code}: {r.text[:300]}")
+                raise RuntimeError(f"Groq {r.status_code}: {_redact(r.text[:300])}")
             data = r.json()
             u = data.get("usage", {})
             with self._lock:
@@ -240,7 +249,7 @@ class GroqContextualizer:
                 self.usage.input_tokens += int(u.get("prompt_tokens", 0))
                 self.usage.output_tokens += int(u.get("completion_tokens", 0))
             return str(data["choices"][0]["message"]["content"]).strip()
-        raise ContextBudgetExceeded(f"Groq rate limit, retries exhausted: {last}")
+        raise RuntimeError(f"Groq: 5xx retries exhausted: {last}")
 
     def contextualize(self, doc_text: str, chunks: list[Chunk]) -> list[Chunk]:
         out = []
