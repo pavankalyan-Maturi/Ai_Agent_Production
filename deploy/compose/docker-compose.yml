@@ -1,0 +1,209 @@
+# Profiles:
+#   core   : postgres+pgvector, pgbouncer, redis, api
+#   obs    : otel-collector, prometheus, grafana, loki
+#   llmobs : langfuse v4 (web, worker, clickhouse, redis, S3) -- heavy, off by default
+#   full   : everything
+# Usage: docker compose -f deploy/compose/docker-compose.yml --env-file .env --profile core up -d
+name: pap
+
+x-dev-defaults: &pgpass ${POSTGRES_PASSWORD:-pap-dev-only}
+
+services:
+  postgres:
+    image: pgvector/pgvector:0.8.6-pg17
+    profiles: [core, llmobs, full]
+    environment:
+      POSTGRES_USER: pap
+      POSTGRES_PASSWORD: *pgpass
+      POSTGRES_DB: pap
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./postgres/init.sql:/docker-entrypoint-initdb.d/00-init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pap -d pap"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+    ports: ["127.0.0.1:5432:5432"]
+
+  pgbouncer:
+    image: edoburu/pgbouncer:v1.24.1-p1
+    profiles: [core, full]
+    environment:
+      DB_HOST: postgres
+      DB_USER: pap
+      DB_PASSWORD: *pgpass
+      DB_NAME: pap
+      POOL_MODE: transaction
+      AUTH_TYPE: scram-sha-256
+      MAX_CLIENT_CONN: "500"
+      DEFAULT_POOL_SIZE: "20"
+    depends_on:
+      postgres: {condition: service_healthy}
+    ports: ["127.0.0.1:6432:5432"]
+
+  redis:
+    image: redis:7.4-alpine
+    profiles: [core, full]
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 3s
+      retries: 20
+    ports: ["127.0.0.1:6379:6379"]
+
+  api:
+    build: {context: ../.., dockerfile: Dockerfile}
+    image: pap-api:dev
+    profiles: [core, full]
+    environment:
+      PAP_ENV: local
+      PAP_DATABASE_URL: postgresql://pap:${POSTGRES_PASSWORD:-pap-dev-only}@pgbouncer:5432/pap
+      PAP_REDIS_URL: redis://redis:6379/0
+      # Collector only exists in obs/full; export fails soft (batch processor drops) otherwise.
+      PAP_OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
+    depends_on:
+      pgbouncer: {condition: service_started}
+      redis: {condition: service_healthy}
+    ports: ["127.0.0.1:8000:8000"]
+
+  # ---------------- obs ----------------
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.140.0
+    profiles: [obs, full]
+    command: ["--config=/etc/otelcol/config.yaml"]
+    environment:
+      LANGFUSE_OTLP_ENDPOINT: http://langfuse-web:3000/api/public/otel
+      LANGFUSE_AUTH: ${LANGFUSE_OTLP_BASIC_AUTH:-}
+    volumes:
+      - ./otel/config.yaml:/etc/otelcol/config.yaml:ro
+    ports: ["127.0.0.1:4318:4318", "127.0.0.1:8888:8888"]
+
+  prometheus:
+    image: prom/prometheus:v3.7.3
+    profiles: [obs, full]
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    ports: ["127.0.0.1:9090:9090"]
+
+  loki:
+    image: grafana/loki:3.5.7
+    profiles: [obs, full]
+    command: ["-config.file=/etc/loki/local-config.yaml"]
+    ports: ["127.0.0.1:3100:3100"]
+
+  grafana:
+    image: grafana/grafana:12.2.1
+    profiles: [obs, full]
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-pap-dev-only}
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+    depends_on: [prometheus, loki]
+    ports: ["127.0.0.1:3001:3000"]
+
+  # ---------------- llmobs (Langfuse v4) ----------------
+  clickhouse:
+    image: clickhouse/clickhouse-server:25.12
+    profiles: [llmobs, full]
+    user: "101:101"
+    environment:
+      CLICKHOUSE_DB: default
+      CLICKHOUSE_USER: clickhouse
+      CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:-pap-dev-only}
+    volumes: [chdata:/var/lib/clickhouse]
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:8123/ping || exit 1"]
+      interval: 5s
+      retries: 30
+
+  langfuse-redis:
+    image: redis:7.4-alpine
+    profiles: [llmobs, full]
+    # Langfuse queues require noeviction.
+    command: ["redis-server", "--maxmemory-policy", "noeviction", "--save", ""]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 3s
+      retries: 20
+
+  s3:
+    # MinIO's Docker Hub images are no longer published; SeaweedFS is the S3-compatible stand-in (ADR-0001).
+    image: chrislusf/seaweedfs:4.01
+    profiles: [llmobs, full]
+    command: ["server", "-s3", "-s3.config=/etc/seaweedfs/s3.json", "-dir=/data", "-master.volumeSizeLimitMB=256"]
+    environment:
+      S3_ACCESS_KEY: ${S3_ACCESS_KEY:-pap-dev}
+      S3_SECRET_KEY: ${S3_SECRET_KEY:-pap-dev-secret}
+    entrypoint: ["/bin/sh", "-c", "printf '{\"identities\":[{\"name\":\"pap\",\"credentials\":[{\"accessKey\":\"%s\",\"secretKey\":\"%s\"}],\"actions\":[\"Admin\",\"Read\",\"Write\",\"List\",\"Tagging\"]}]}' \"$$S3_ACCESS_KEY\" \"$$S3_SECRET_KEY\" > /etc/seaweedfs/s3.json && exec weed \"$$@\"", "--"]
+    volumes: [s3data:/data]
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O- http://127.0.0.1:9333/cluster/status >/dev/null || exit 1"]
+      interval: 3s
+      retries: 30
+
+  s3-init:
+    image: chrislusf/seaweedfs:4.01
+    profiles: [llmobs, full]
+    depends_on:
+      s3: {condition: service_healthy}
+    entrypoint: ["/bin/sh", "-c", "echo 's3.bucket.create -name langfuse' | weed shell -master=s3:9333"]
+    restart: "no"
+
+  langfuse-worker: &langfuse
+    image: langfuse/langfuse-worker:4
+    profiles: [llmobs, full]
+    depends_on:
+      postgres: {condition: service_healthy}
+      clickhouse: {condition: service_healthy}
+      langfuse-redis: {condition: service_healthy}
+      s3-init: {condition: service_completed_successfully}
+    environment: &lfenv
+      DATABASE_URL: postgresql://pap:${POSTGRES_PASSWORD:-pap-dev-only}@postgres:5432/langfuse
+      SALT: ${LANGFUSE_SALT:-change-me-dev-salt}
+      ENCRYPTION_KEY: ${LANGFUSE_ENCRYPTION_KEY:-0000000000000000000000000000000000000000000000000000000000000000}
+      TELEMETRY_ENABLED: "false"
+      CLICKHOUSE_MIGRATION_URL: clickhouse://clickhouse:9000
+      CLICKHOUSE_URL: http://clickhouse:8123
+      CLICKHOUSE_USER: clickhouse
+      CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:-pap-dev-only}
+      CLICKHOUSE_CLUSTER_ENABLED: "false"
+      REDIS_HOST: langfuse-redis
+      REDIS_PORT: "6379"
+      LANGFUSE_S3_EVENT_UPLOAD_BUCKET: langfuse
+      LANGFUSE_S3_EVENT_UPLOAD_REGION: us-east-1
+      LANGFUSE_S3_EVENT_UPLOAD_ACCESS_KEY_ID: ${S3_ACCESS_KEY:-pap-dev}
+      LANGFUSE_S3_EVENT_UPLOAD_SECRET_ACCESS_KEY: ${S3_SECRET_KEY:-pap-dev-secret}
+      LANGFUSE_S3_EVENT_UPLOAD_ENDPOINT: http://s3:8333
+      LANGFUSE_S3_EVENT_UPLOAD_FORCE_PATH_STYLE: "true"
+      LANGFUSE_S3_MEDIA_UPLOAD_BUCKET: langfuse
+      LANGFUSE_S3_MEDIA_UPLOAD_REGION: us-east-1
+      LANGFUSE_S3_MEDIA_UPLOAD_ACCESS_KEY_ID: ${S3_ACCESS_KEY:-pap-dev}
+      LANGFUSE_S3_MEDIA_UPLOAD_SECRET_ACCESS_KEY: ${S3_SECRET_KEY:-pap-dev-secret}
+      LANGFUSE_S3_MEDIA_UPLOAD_ENDPOINT: http://s3:8333
+      LANGFUSE_S3_MEDIA_UPLOAD_FORCE_PATH_STYLE: "true"
+
+  langfuse-web:
+    <<: *langfuse
+    image: langfuse/langfuse:4
+    environment:
+      <<: *lfenv
+      NEXTAUTH_URL: http://localhost:3000
+      NEXTAUTH_SECRET: ${LANGFUSE_NEXTAUTH_SECRET:-change-me-dev-secret}
+      LANGFUSE_INIT_ORG_ID: pap
+      LANGFUSE_INIT_ORG_NAME: pap
+      LANGFUSE_INIT_PROJECT_ID: pap
+      LANGFUSE_INIT_PROJECT_NAME: pap
+      LANGFUSE_INIT_PROJECT_PUBLIC_KEY: ${LANGFUSE_INIT_PROJECT_PUBLIC_KEY:-pk-lf-pap-dev}
+      LANGFUSE_INIT_PROJECT_SECRET_KEY: ${LANGFUSE_INIT_PROJECT_SECRET_KEY:-sk-lf-pap-dev}
+      LANGFUSE_INIT_USER_EMAIL: admin@pap.local
+      LANGFUSE_INIT_USER_NAME: admin
+      LANGFUSE_INIT_USER_PASSWORD: ${LANGFUSE_INIT_USER_PASSWORD:-pap-dev-only-pw}
+    ports: ["127.0.0.1:3000:3000"]
+
+volumes:
+  pgdata:
+  chdata:
+  s3data:
