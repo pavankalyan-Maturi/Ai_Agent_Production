@@ -9,8 +9,10 @@
 - Integration (real RabbitMQ 4.2 + pgvector + moto S3 + in-process worker): DLQ 4/4, dedupe 10/10, redelivery no-op, retry ×2 → done. A fresh-DB migration race that lost a message was found by CI and fixed (ADR 003).
 - Image build stage: imports, task registered, `celery` binary present.
 
-## Not verified here
-- Final image stage (apt mirrors blocked here) and `compose-smoke` with the new core services: CI.
+## Verified in CI
+All 7 checks green on 251a7b5: lint-type-test, integration, smoke (compose core+obs incl. rabbitmq, worker healthy, s3), trivy-image, trivy-config, pip-audit, retrieval eval.
+
+## Not verified
 - Worker with the real fastembed model (needs HF access): you or CI.
 
 ## Open

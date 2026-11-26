@@ -56,4 +56,4 @@ Commit 7364b2c, `PAP_TEST_DATABASE_URL=... uv run pytest -m integration -s`. CI 
 | Redelivered message for a done job | 0 new chunks, attempts stays 1 |
 | Transient S3 error ×2 | done on attempt 3 |
 
-First run on a fresh database lost one message: a migration race (fixed, ADR 003; repro 5/5 trials with UniqueViolation before, 0 after; regression test `test_concurrent_migrate_is_safe`). CI run after the fix: pending. Throughput with the real fastembed model: NOT MEASURED.
+First run on a fresh database lost one message: a migration race (fixed, ADR 003; repro 5/5 trials with UniqueViolation before, 0 after; regression test `test_concurrent_migrate_is_safe`). CI ([integration, 251a7b5](https://github.com/pavankalyan-Maturi/Ai_Agent_Production/actions/runs/45902058992/job/140189945175), fresh DB + broker): 40 docs + 4 poison in 0.98 s (41 docs/s), DLQ 4/4, dedupe 10/10, retry ×2 → done on attempt 3; same run's filtered-ANN test recall@10 off 0.020 → on 0.830. Throughput with the real fastembed model: NOT MEASURED.
