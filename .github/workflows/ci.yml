@@ -30,8 +30,14 @@ jobs:
         ports: ["5432:5432"]
         options: >-
           --health-cmd "pg_isready -U t" --health-interval 2s --health-retries 30
+      rabbitmq:
+        image: rabbitmq:4.2-management-alpine
+        ports: ["5672:5672"]
+        options: >-
+          --health-cmd "rabbitmq-diagnostics -q ping" --health-interval 5s --health-retries 30
     env:
       PAP_TEST_DATABASE_URL: postgresql://t:t@localhost:5432/t
+      PAP_TEST_BROKER_URL: amqp://guest:guest@localhost:5672//
     steps:
       - uses: actions/checkout@v5
       - uses: astral-sh/setup-uv@v7

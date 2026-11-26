@@ -1,23 +1,26 @@
 # Handoff
 
 ## Done
-- Phase 0 merged (PR #1).
-- Phase 1A (PR #2, draft, not merged): retrieval core in `retrieval/` (chunker, embedder, PgStore with HNSW + FTS + iterative scan, RRF, cross-encoder rerank, contextual headers via Groq or Claude Haiku 5.5 with disk cache), SciFact ablation in `evals/retrieval/`, CI workflow `eval-retrieval.yml`. ADR 002. Numbers in RESULTS, Phase 1A.
+- Phase 0 merged (PR #1). Phase 1A merged (PR #2): retrieval core + SciFact ablation, ADR 002.
+- Phase 1B (this PR, not merged): S3 → RabbitMQ → Celery ingest in `apps/ingest/` (quorum queue + DLX → `ingest.dlq`, delivery limit 5, acks_late, full-jitter retries, poison → DLQ), idempotency ledger `ingest_jobs`, `POST /v1/ingest` (202, idempotent). Compose core profile gains rabbitmq, ingest-worker, s3. Dockerfile now ships `retrieval/` and fastembed. ADR 003.
 
-## Verified
-- Gate locally: ruff, format, mypy strict, 28 unit tests; integration tests against local pgvector (filtered recall off 0.015 → on 0.845).
-- CI eval run #12: all six ablation rows measured on 200 queries, 1500 docs. Contextual (Haiku 5.5) gave no gain on SciFact (RESULTS, ADR 002).
+## Verified here
+- Gate: ruff, format, mypy strict, 37 unit tests; actionlint.
+- Integration (real RabbitMQ 4.2 + pgvector + moto S3 + in-process worker): DLQ 4/4, dedupe 10/10, redelivery no-op, retry ×2 → done. A fresh-DB migration race that lost a message was found by CI and fixed (ADR 003).
+- Image build stage: imports, task registered, `celery` binary present.
+
+## Verified in CI
+All 7 checks green on 251a7b5: lint-type-test, integration, smoke (compose core+obs incl. rabbitmq, worker healthy, s3), trivy-image, trivy-config, pip-audit, retrieval eval.
 
 ## Not verified
-- Groq path never completed a full run (free tier 8k TPM); its quota handling is unit-tested only.
-- Haiku actual billing not read; $0.67 is computed from usage.
-- This sandbox cannot reach Hugging Face, Groq or Anthropic; CI is the only verifier for downloads and providers.
+- Worker with the real fastembed model (needs HF access): you or CI.
 
 ## Open
-- PR B (P1.1): S3 → RabbitMQ → Celery ingest with retries, DLQ, idempotency key. Not started.
+- Stale chunks when a re-ingested document gets shorter (ADR 003).
+- Tenant from header until auth (Phase 5). Text only (no PDF/HTML extraction).
 
 ## Next step
-Review and merge PR #2. Then PR B (P1.1 ingest) on the same branch, restarted from main.
+Review and merge this PR. Then Phase 2 (LangGraph agent loop) on request.
 
 ## Versions pinned
-docs/SPEC.md Pins table, plus ADR 002 (pgvector 0.8.6, pgvector-python 0.5.1, fastembed 0.9.1, anthropic 2.14, prompt v2).
+docs/SPEC.md Pins table, ADR 002, ADR 003 (rabbitmq 4.2, celery/kombu 5.7.x, boto3 1.44.x, moto 5.2.x).

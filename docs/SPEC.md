@@ -44,7 +44,8 @@ docs/                SPEC, TASKS, handoff, RESULTS, COSTS, adr/, runbooks/
 | MCP | spec 2026-07-28 (stateless); `mcp[cli]==2.0.*` (MCPServer) | planned P3 |
 | A2A | spec 1.0; `a2a-sdk>=1.1,<2` | planned P3 |
 | LiteLLM proxy | newest stable >=1.97 at Phase 4 after a GHSA check; never 1.107.0; non-root; admin UI off | planned P4 |
-| RabbitMQ / Celery | rabbitmq 4 / celery 5.x | planned P1 |
+| RabbitMQ / Celery / kombu | rabbitmq 4.2 (`rabbitmq:4.2-management-alpine`, quorum queues) / celery 5.7.x / kombu 5.7.x (ADR 003) | installed |
+| S3 client | boto3 1.44.x; tests: moto 5.2.x server mode | installed |
 | vLLM | 0.34.0 (Phase 7, human-run) | planned P7 |
 
 ## Models (Claude via LiteLLM; one place to change)
@@ -53,7 +54,7 @@ docs/                SPEC, TASKS, handoff, RESULTS, COSTS, adr/, runbooks/
 - CI uses a deterministic mock model behind the same LiteLLM interface; real-model runs are opt-in and cost-capped.
 
 ## Feature flags (env, default)
-RETRIEVAL_CONTEXTUAL=on, RETRIEVAL_LATE_CHUNKING=off, RETRIEVAL_RERANK=cross_encoder|off,
+RETRIEVAL_CONTEXTUAL=off (ADR 002), RETRIEVAL_LATE_CHUNKING=off, RETRIEVAL_RERANK=cross_encoder|off,
 RETRIEVAL_GRAPH_HIPPORAG=off, PGVECTOR_ITERATIVE_SCAN=relaxed_order,
 MEMORY_EXPERIENCE=off|reasoningbank, MEMORY_ADMISSION_GATE=on, REFLECTION=grounded_only,
 CONTEXT_COMPACTION=on, TOOL_RETRIEVAL_RAGMCP=off, GUARD_PLAN_DATA_SEPARATION=on,

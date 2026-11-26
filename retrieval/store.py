@@ -53,7 +53,10 @@ class PgStore:
             yield conn
 
     def migrate(self) -> None:
-        with psycopg.connect(self.dsn, autocommit=True) as conn:
+        # One transaction + advisory xact lock: concurrent workers racing on CREATE ... IF NOT
+        # EXISTS otherwise hit unique violations on pg_type. Safe behind PgBouncer (xact-scoped).
+        with psycopg.connect(self.dsn, prepare_threshold=None) as conn, conn.transaction():
+            conn.execute("SELECT pg_advisory_xact_lock(hashtext('pap.migrate.chunks'))")
             conn.execute(SCHEMA.format(dim=int(self.dim)))  # dim is an int, not user input
 
     def upsert(self, chunks: Sequence[Chunk], vectors: Sequence[Vec]) -> int:

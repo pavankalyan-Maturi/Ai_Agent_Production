@@ -8,9 +8,10 @@ RUN --mount=type=secret,id=extra_ca sh -c "$CA_SETUP; pip install --no-cache-dir
 WORKDIR /app
 ENV UV_COMPILE_BYTECODE=1 UV_LINK_MODE=copy UV_PYTHON_DOWNLOADS=never
 COPY pyproject.toml uv.lock README.md ./
-RUN --mount=type=secret,id=extra_ca sh -c "$CA_SETUP; uv sync --frozen --no-dev --no-install-project"
+RUN --mount=type=secret,id=extra_ca sh -c "$CA_SETUP; uv sync --frozen --no-dev --group eval --no-install-project"
 COPY apps ./apps
-RUN --mount=type=secret,id=extra_ca sh -c "$CA_SETUP; uv sync --frozen --no-dev"
+COPY retrieval ./retrieval
+RUN --mount=type=secret,id=extra_ca sh -c "$CA_SETUP; uv sync --frozen --no-dev --group eval"
 
 FROM python:3.12-slim
 # Pull Debian security fixes newer than the base image (Trivy gates HIGH/CRITICAL with a fix).

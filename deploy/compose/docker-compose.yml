@@ -1,5 +1,5 @@
 # Profiles:
-#   core   : postgres+pgvector, pgbouncer, redis, api
+#   core   : postgres+pgvector, pgbouncer, redis, rabbitmq, api, ingest-worker, s3
 #   obs    : otel-collector, prometheus, grafana, loki
 #   llmobs : langfuse v4 (web, worker, clickhouse, redis, S3) -- heavy, off by default
 #   full   : everything
@@ -52,6 +52,43 @@ services:
       retries: 20
     ports: ["127.0.0.1:6379:6379"]
 
+  rabbitmq:
+    image: rabbitmq:4.2-management-alpine
+    profiles: [core, full]
+    environment:
+      RABBITMQ_DEFAULT_USER: pap
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-pap-dev-only}
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 5s
+      retries: 30
+    ports: ["127.0.0.1:5672:5672", "127.0.0.1:15672:15672"]
+
+  ingest-worker:
+    image: pap-api:dev
+    profiles: [core, full]
+    # Consumes only `ingest`; `ingest.dlq` is for humans (management UI on :15672).
+    command: ["celery", "-A", "apps.ingest.celery_app", "worker", "-Q", "ingest", "--concurrency", "2", "--loglevel", "INFO"]
+    environment:
+      PAP_ENV: local
+      PAP_DATABASE_URL: postgresql://pap:${POSTGRES_PASSWORD:-pap-dev-only}@pgbouncer:5432/pap
+      PAP_BROKER_URL: amqp://pap:${RABBITMQ_PASSWORD:-pap-dev-only}@rabbitmq:5672//
+      PAP_S3_ENDPOINT_URL: http://s3:8333
+      PAP_S3_ACCESS_KEY_ID: ${S3_ACCESS_KEY:-pap-dev}
+      PAP_S3_SECRET_ACCESS_KEY: ${S3_SECRET_KEY:-pap-dev-secret}
+      FASTEMBED_CACHE_PATH: /tmp/fastembed
+    depends_on:
+      pgbouncer: {condition: service_started}
+      rabbitmq: {condition: service_healthy}
+      s3: {condition: service_healthy}
+    # The image's HEALTHCHECK probes the API port; the worker answers a broker ping instead.
+    healthcheck:
+      test: ["CMD-SHELL", "celery -A apps.ingest.celery_app inspect ping -d celery@$$HOSTNAME --timeout 5 >/dev/null || exit 1"]
+      interval: 15s
+      timeout: 20s
+      start_period: 20s
+      retries: 10
+
   api:
     build: {context: ../.., dockerfile: Dockerfile}
     image: pap-api:dev
@@ -60,11 +97,13 @@ services:
       PAP_ENV: local
       PAP_DATABASE_URL: postgresql://pap:${POSTGRES_PASSWORD:-pap-dev-only}@pgbouncer:5432/pap
       PAP_REDIS_URL: redis://redis:6379/0
+      PAP_BROKER_URL: amqp://pap:${RABBITMQ_PASSWORD:-pap-dev-only}@rabbitmq:5672//
       # Collector only exists in obs/full; export fails soft (batch processor drops) otherwise.
       PAP_OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
     depends_on:
       pgbouncer: {condition: service_started}
       redis: {condition: service_healthy}
+      rabbitmq: {condition: service_healthy}
     ports: ["127.0.0.1:8000:8000"]
 
   # ---------------- obs ----------------
@@ -132,7 +171,7 @@ services:
   s3:
     # MinIO's Docker Hub images are no longer published; SeaweedFS is the S3-compatible stand-in (ADR-0001).
     image: chrislusf/seaweedfs:4.01
-    profiles: [llmobs, full]
+    profiles: [core, llmobs, full]
     command: ["server", "-s3", "-s3.config=/etc/seaweedfs/s3.json", "-dir=/data", "-master.volumeSizeLimitMB=256"]
     environment:
       S3_ACCESS_KEY: ${S3_ACCESS_KEY:-pap-dev}

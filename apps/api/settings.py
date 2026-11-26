@@ -26,6 +26,17 @@ class Settings(BaseSettings):
     # PII stays out of traces unless explicitly enabled (project rule 8).
     otel_capture_content: bool = False
 
+    # Ingestion (Phase 1): RabbitMQ broker for Celery, S3-compatible object store.
+    broker_url: SecretStr = SecretStr("amqp://guest:guest@localhost:5672//")
+    s3_endpoint_url: str | None = None  # None = AWS; SeaweedFS/MinIO locally
+    s3_region: str = "us-east-1"
+    s3_access_key_id: SecretStr | None = None
+    s3_secret_access_key: SecretStr | None = None
+    embedder: Literal["fastembed", "hash"] = "fastembed"  # hash = tests only
+    embedding_dim: int = 384
+    ingest_max_bytes: int = 5_000_000
+    ingest_max_retries: int = 5
+
     # Placeholder for the LiteLLM virtual key (Phase 4). Never logged.
     llm_api_key: SecretStr | None = None
 
