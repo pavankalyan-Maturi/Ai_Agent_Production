@@ -54,6 +54,8 @@ data "aws_ssm_parameter" "al2023" {
   name = "/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64"
 }
 
+# Egress anywhere: the node pulls images and charts from public registries.
+#trivy:ignore:AVD-AWS-0104
 resource "aws_security_group" "k3s" {
   name   = "pap-k3s"
   vpc_id = data.aws_vpc.default.id
@@ -115,6 +117,7 @@ resource "aws_instance" "k3s" {
   root_block_device {
     volume_size = 40
     volume_type = "gp3"
+    encrypted   = true
   }
 
   # Dead man's switch: the node powers off (and so terminates) after 10 hours.

@@ -11,11 +11,21 @@ spec:
     metadata:
       labels: {app.kubernetes.io/name: pap-redis}
     spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 999  # redis user in the official image
+        seccompProfile: {type: RuntimeDefault}
+      volumes: [{name: data, emptyDir: {}}]
       containers:
         - name: redis
           image: {{ .Values.redis.image }}
           args: ["--save", "", "--appendonly", "no"]  # cache only, no persistence
           ports: [{containerPort: 6379}]
+          volumeMounts: [{name: data, mountPath: /data}]
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: {drop: [ALL]}
           resources:
             requests: {cpu: 50m, memory: 64Mi}
 ---
@@ -41,11 +51,20 @@ spec:
     metadata:
       labels: {app.kubernetes.io/name: pap-mock-llm}
     spec:
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile: {type: RuntimeDefault}
+      volumes: [{name: tmp, emptyDir: {}}]
       containers:
         - name: mock-llm
           image: {{ include "pap.image" . }}
           command: ["uvicorn", "gateway.mock_llm:app", "--host", "0.0.0.0", "--port", "8010"]
           ports: [{containerPort: 8010}]
+          volumeMounts: [{name: tmp, mountPath: /tmp}]
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: {drop: [ALL]}
           resources:
             requests: {cpu: 50m, memory: 256Mi}
 ---

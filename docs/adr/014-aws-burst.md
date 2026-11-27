@@ -28,6 +28,10 @@ All numbers NOT MEASURED; prices are list-price ESTIMATES.
 - **KEDA with a CPU trigger only.** Honest note: for CPU alone KEDA is an HPA wrapper and does not
   earn its place; it is here because the spec asks for it and the next trigger (RabbitMQ queue
   depth for ingest workers, scale-to-zero) is where it does.
+- **Security scan (trivy config) clean**: k8s Secrets envelope-encrypted with a KMS key (7-day
+  deletion window, not billed while pending), read-only root filesystems, encrypted k3s disk.
+  Four findings are accepted inline with reasons (`#trivy:ignore`): public EKS endpoint (limited
+  to `allowed_cidr`), public-IP subnets (no-NAT tradeoff), SSE-S3 instead of a CMK, k3s egress.
 - **One Chaos Mesh experiment** (pod-kill every 60 s for 10 min under Locust), per SPEC non-goals.
 - **Mock LLM in the burst.** No GPU and no paid model calls; the burst tests the platform, not
   the model.

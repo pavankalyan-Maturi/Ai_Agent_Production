@@ -18,7 +18,8 @@ rc=$?
 
 echo "== leftovers tagged project=pap (must be empty) =="
 left=$(aws resourcegroupstaggingapi get-resources --region "$REGION" --tag-filters Key=project,Values=pap \
-  --query 'ResourceTagMappingList[].ResourceARN' --output text)
+  --query 'ResourceTagMappingList[].ResourceARN' --output text | tr '\t' '\n' | grep -v ':kms:' || true)
+# The KMS key sits in a 7-day pending-deletion window (not billed) and is excluded above.
 echo "${left:-none}"
 echo "== untagged controller leftovers (must be empty) =="
 aws elbv2 describe-load-balancers --region "$REGION" --query 'LoadBalancers[?starts_with(LoadBalancerName, `k8s-pap`)].LoadBalancerArn' --output text

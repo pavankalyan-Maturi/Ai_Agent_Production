@@ -24,6 +24,8 @@ resource "aws_internet_gateway" "this" {
   vpc_id = aws_vpc.this.id
 }
 
+# Public IPs on nodes are the no-NAT tradeoff (ADR 014); ingress is limited to allowed_cidr.
+#trivy:ignore:AVD-AWS-0164
 resource "aws_subnet" "public" {
   count                   = 2
   vpc_id                  = aws_vpc.this.id
@@ -72,6 +74,8 @@ resource "aws_iam_role_policy_attachment" "cluster" {
   policy_arn = "arn:aws:iam::aws:policy/AmazonEKSClusterPolicy"
 }
 
+# Public endpoint restricted to allowed_cidr (public_access_cidrs); a bastion/VPN is out of scope.
+#trivy:ignore:AVD-AWS-0040
 resource "aws_eks_cluster" "this" {
   name     = var.name
   version  = var.kubernetes_version
@@ -89,12 +93,26 @@ resource "aws_eks_cluster" "this" {
     public_access_cidrs     = [var.allowed_cidr]
   }
 
+  encryption_config {
+    resources = ["secrets"]
+    provider {
+      key_arn = aws_kms_key.eks.arn
+    }
+  }
+
   # Standard support only: extended support bills $0.60/h instead of $0.10/h.
   upgrade_policy {
     support_type = "STANDARD"
   }
 
   depends_on = [aws_iam_role_policy_attachment.cluster]
+}
+
+# Envelope encryption for k8s Secrets. ~$1/month prorated; keys pending deletion are not billed.
+resource "aws_kms_key" "eks" {
+  description             = "${var.name} EKS secrets"
+  deletion_window_in_days = 7
+  enable_key_rotation     = true
 }
 
 data "aws_iam_policy_document" "node_assume" {
@@ -226,6 +244,8 @@ resource "aws_s3_bucket_public_access_block" "pgbackrest" {
   restrict_public_buckets = true
 }
 
+# SSE-S3 is enough for a one-day drill bucket; a CMK adds a key to manage and destroy.
+#trivy:ignore:AVD-AWS-0132
 resource "aws_s3_bucket_server_side_encryption_configuration" "pgbackrest" {
   bucket = aws_s3_bucket.pgbackrest.id
   rule {
