@@ -1,0 +1,194 @@
+qid,question,gold,answer,human_correct,note
+5a8b57f25542995d1e6f1371,Were Scott Derrickson and Ed Wood of the same nationality?,yes,"Yes. Both are described as American: Scott Derrickson is ""an American director, screenwriter and producer"" [Scott Derrickson], and Ed Wood is ""an American filmmaker, actor, writer, producer, and direc",1,Correct: both American (Yes)
+5a8c7595554299585d9e36b6,What government position was held by the woman who portrayed Corliss Archer in the film Kiss and Tell?,Chief of Protocol,Shirley Temple played Corliss Archer in *Kiss and Tell* (1945) [Kiss and Tell (1945 film)]. She later served as a U.S. ambassador (to Ghana and Czechoslovakia) and as Chief of Protocol of the United S,1,Correct: identifies Shirley Temple and Chief of Protocol
+5a85ea095542994775f606a8,"What science fantasy young adult series, told in first person, has a set of companion books narrating the stories of enslaved worlds and alien species?",Animorphs,"Animorphs
+
+[Animorphs] [The Hork-Bajir Chronicles]",1,Correct: Animorphs
+5adbf0a255429947ff17385a,Are the Laleli Mosque and Esma Sultan Mansion located in the same neighborhood?,no,"No. The Laleli Mosque is in Laleli, Fatih [Laleli Mosque], while the Esma Sultan Mansion is in Ortaköy [Esma Sultan Mansion].",1,Correct: No (Laleli vs. Ortaköy)
+5a8e3ea95542995a26add48d,"The director of the romantic comedy ""Big Stone Gap"" is based in what New York city?","Greenwich Village, New York City","Greenwich Village [Adriana Trigiani], [Big Stone Gap (film)]",1,Correct: Greenwich Village
+5abd94525542992ac4f382d2,2014 S/S is the debut album of a South Korean boy group that was formed by who?,YG Entertainment,YG Entertainment [2014 S/S],1,Correct: YG Entertainment
+5a85b2d95542997b5ce40028,Who was known by his stage name Aladin and helped organizations improve their performance as a consultant?,Eenasul Fateh,"Eenasul Fateh
+
+[Eenasul Fateh]",1,Correct: Eenasul Fateh
+5a87ab905542996e4f3088c1,The arena where the Lewiston Maineiacs played their home games can seat how many people?,"3,677 seated","3,677 seated (4,000 capacity) [Androscoggin Bank Colisée]; the team's home arena is documented in [Lewiston Maineiacs].",1,"Correct: 3,677 seated"
+5a7bbb64554299042af8f7cc,"Who is older, Annie Morton or Terry Richardson?",Terry Richardson,"Terry Richardson (born August 14, 1965) [Terry Richardson]; Annie Morton (born October 8, 1970) [Annie Morton]",1,Correct: Terry Richardson
+5a8db19d5542994ba4e3dd00,Are Local H and For Against both from the United States?,yes,"I couldn't find any document about For Against, so I can't confirm its origin.
+
+**Local H: Yes** [Local H], [Hallelujah! I'm a Bum (album)]
+**For Against: Unknown** (no document found)",0,Abstention / incomplete: could not confirm For Against
+5a7166395542994082a3e814,"What is the name of the fight song of the university whose main campus is in Lawrence, Kansas and whose branch campuses are in the Kansas City metropolitan area?",Kansas Song,"**Kansas Song (We're From Kansas)** [Kansas Song], [University of Kansas]",1,Correct: Kansas Song
+5a877e5d5542993e715abf7d,"What screenwriter with credits for ""Evolution"" co-wrote a film starring Nicolas Cage and Téa Leoni?",David Weissman,"The fetches returned the same text as the search snippets, but they didn't provide real doc_ids. The only ids I can cite are the titles I used as the source labels, and those aren't verified ids. I ca",0,Abstention / tool failure message; does not name David Weissman
+5ab3b0bf5542992ade7c6e39,What year did Guns N Roses perform a promo for a movie starring Arnold Schwarzenegger as a former New York Police detective?,1999,"1999 â€” Guns N' Roses' ""Oh My God"" was sent to radio in November 1999 as a promo for the *End of Days* soundtrack, which stars Schwarzenegger as former NYPD detective Jericho Cane.
+
+[Oh My God (Guns N'",1,Correct: 1999
+5ab56e32554299637185c594,Are Random House Tower and 888 7th Avenue both used for real estate?,no,"Yes. Random House Tower is a mixed-use tower with a luxury apartment complex, and 888 7th Avenue is an office skyscraper housing the Vornado Realty Trust headquarters. [Random House Tower], [888 7th A",0,"Contradicts gold: answers Yes instead of no (Random House Tower is residential/mixed, 888 7th Ave is office/real estate)"
+5ab6d09255429954757d337d,The football manager who recruited David Beckham managed Manchester United during what timeframe?,from 1986 to 2013,1986â€“2013 [Alex Ferguson],1,Correct: 1986–2013
+5a75e05c55429976ec32bc5f,Brown State Fishing Lake is in a country that has a population of how many inhabitants ?,9984,"I couldn't find a document in the tenant's collection that states the population of the United States, so I can't give a sourced figure.
+
+What I did establish: Brown State Fishing Lake is a protected ",0,Abstention: fails to provide the expected figure (9984)
+5ab3e45655429976abd1bcd4,The Vermont Catamounts men's soccer team currently competes in a conference that was formerly known as what from 1988 to 1996?,the North Atlantic Conference,North Atlantic Conference [America East Conference],1,Correct: North Atlantic Conference
+5ab29c24554299449642c932,Are Giuseppe Verdi and Ambroise Thomas both Opera composers ?,yes,"Yes. Giuseppe Verdi is described as an Italian opera composer, and Ambroise Thomas is known for his operas ""Mignon"" and ""Hamlet"" [Giuseppe Verdi], [Ambroise Thomas]",1,Correct: Yes
+5ae0d4c9554299603e418468,Roger O. Egeberg was Assistant Secretary for Health and Scientific Affairs during the administration of a president that served during what years?,1969 until 1974,1969â€“1974 (Nixon administration) [Roger O. Egeberg],1,Correct: 1969–1974
+5a8133725542995ce29dcbdb,"Which writer was from England, Henry Roth or Robert Erskine Childers?",Robert Erskine Childers DSC,"Robert Erskine Childers
+
+[Robert Erskine Childers] (Henry Roth is described as American, [Henry Roth])",1,Correct: Robert Erskine Childers
+5ae7a8175542993210983ed8,Which other Mexican Formula One race car driver has held the podium besides the Force India driver born in 1990?,Pedro Rodríguez,"Pedro RodrÃ­guez [Formula One drivers from Mexico] â€” the other Mexican driver to have finished on the podium, besides Sergio PÃ©rez (born 26 January 1990, Force India).
+
+Pedro RodrÃ­guez [Formula One dri",1,Correct: Pedro Rodríguez
+5ae6050f55429929b0807a5e,This singer of A Rather Blustery Day also voiced what hedgehog?,Sonic,"Jim Cummings is the singer. The hedgehog he voiced is Dr. Robotnik in ""Sonic the Hedgehog"" (though the snippet doesn't say whether that's a hedgehog character; the Sonic series is the reference).
+
+Dr.",0,Incorrect entity: identifies Dr. Robotnik instead of Sonic
+5adddccd5542997dc7907069,"Aside from the Apple Remote, what other device can control the program Apple Remote was originally designed to interact with?",keyboard function keys,"Keyboard function keys
+
+[Front Row (software)] [Apple Remote]",1,Correct: Keyboard function keys
+5ae2070a5542994d89d5b313,"Which performance act has a higher instrument to person ratio, Badly Drawn Boy or Wolf Alice? ",Badly Drawn Boy,"I can't determine this from the documents. Neither source gives a count of instruments used in a performance by either act, so no instrument-to-person ratio can be computed for either.
+
+- Badly Drawn ",0,Abstention: fails to identify Badly Drawn Boy
+5ae22b8d554299234fd0440f,What was the father of Kasper Schmeichel voted to be by the IFFHS in 1992?,World's Best Goalkeeper,"World's Best Goalkeeper [Peter Schmeichel], [Kasper Schmeichel]",1,Correct: World's Best Goalkeeper
+5a722b8655429971e9dc9329,Who was the writer of These Boots Are Made for Walkin' and who died in 2007?,Barton Lee Hazlewood,"Lee Hazlewood
+
+Sources: [These Boots Are Made for Walkin'], [Lee Hazlewood]",1,Correct: Lee Hazlewood (Barton Lee Hazlewood)
+5adf37a95542995ec70e8f97,"The 2011â€“12 VCU Rams men's basketball team, led by third year head coach Shaka Smart, represented Virginia Commonwealth University which was founded in what year?",1838,1838 [Virginia Commonwealth University],1,Correct: 1838
+5abd259d55429924427fcf1a,"Are both Dictyosperma, and Huernia described as a genus?",yes,"Yes [Dictyosperma], [Huernia]",1,Correct: Yes
+5a828c8355429966c78a6a50,Kaiser Ventures corporation was founded by an American industrialist who became known as the father of modern American shipbuilding?,Henry J. Kaiser,"Henry J. Kaiser [Henry J. Kaiser], [Kaiser Ventures]",1,Correct: Henry J. Kaiser
+5a8a3e745542996c9b8d5e70,"What is the name for the adventure in ""Tunnels and Trolls"", a game designed by Ken St. Andre?",Arena of Khazan,Arena of Khazan [Arena of Khazan],1,Correct: Arena of Khazan
+5ac23ff0554299636651994d,"When was Poison's album ""Shut Up, Make Love"" released?",2000,"""Shut Up, Make Love"" is a song, not an album. It was released in 2000 as the first single from Poison's album ""Crack a Smile...and More!"" (released March 14, 2000).
+
+Answer: 2000 (as a single from ""Cr",1,Correct: 2000
+5ae4a3265542995ad6573de5,"Hayden is a singer-songwriter from Canada, but where does Buck-Tick hail from?","Fujioka, Gunma","Fujioka, Gunma [Buck-Tick]",1,"Correct: Fujioka, Gunma"
+5ae0361155429925eb1afc2c,Which  French ace pilot and adventurer fly L'Oiseau Blanc,Charles Eugène,"Charles Nungesser [Charles Nungesser], [L'Oiseau Blanc]",0,Different pilot: names Charles Nungesser instead of gold Charles Eugène (co-pilot François Coli)
+5abc0a5d5542993f40c73c64,Are Freakonomics and In the Realm of the Hackers both American documentaries?,no,"No. Freakonomics is American; In the Realm of the Hackers is Australian.
+
+[Freakonomics (film)] [In the Realm of the Hackers]",1,Correct: No
+5a7cc50e554299452d57ba3e,"Which band, Letters to Cleo or Screaming Trees, had more members?",Letters to Cleo,"Letters to Cleo's listed members are 6 (Kay Hanley, Greg McKenna, Michael Eisenstein, Stacy Jones, Scott Riebling, Tom Polce). Screaming Trees' founding lineup was 4 (Lanegan, Gary Lee Conner, Van Con",1,Correct: Letters to Cleo (6 vs 4)
+5abf63f15542997ec76fd3ea,Alexander Kerensky was defeated and destroyed by the Bolsheviks in the course of a civil war that ended when ?,1922-10-01,"Kerensky's defeat was in the Russian Civil War, which the sources say ended in October 1922 (the first search result) or 1923 in the sense that Red control was assured (the second result).
+
+**Answer: ",1,Correct: October 1922 (1922-10-01)
+5a8ef2a75542995a26add583,Seven Brief Lessons on Physics was written by an Italian physicist that has worked in France since what year?,2000,"2000 [Carlo Rovelli], [Seven Brief Lessons on Physics]",1,Correct: 2000
+5a80721b554299485f5985ef,"The Livesey Hal War Memorial commemorates the fallen of which war, that had over 60 million casualties?",World War II,"World War I and World War II (both wars) â€” [Livesey Hall War Memorial]
+
+Answer: World War I and World War II [Livesey Hall War Memorial]",0,Over-inclusive / ambiguous: lists both WWI and WWII instead of specifically WWII
+5ab51dae5542991779162d82,Are both Elko Regional Airport and Gerald R. Ford International Airport located in Michigan?,no,No. Elko Regional Airport is in Nevada [Elko Regional Airport]; Gerald R. Ford International Airport is in Michigan [Gerald R. Ford International Airport].,1,Correct: No
+5a7571135542992d0ec05f98,Ralph Hefferline was a psychology professor at a university that is located in what city?,New York City,"Columbia University is located in New York City.
+
+**New York City** [Ralph Hefferline]",1,Correct: New York City
+5a7a0e1e5542990783324e1a,Which dog's ancestors include Gordon and Irish Setters: the Manchester Terrier or the Scotch Collie?,Scotch Collie,Scotch Collie [Scotch Collie],1,Correct: Scotch Collie
+5a74106b55429979e288289e,Where is the company that Sachin Warrier worked for as a software engineer headquartered? ,Mumbai,"Mumbai, Maharashtra
+
+[Sachin Warrier], [Tata Consultancy Services]",1,Correct: Mumbai
+5a79311755429970f5fffe67,"A Japanese manga series based on a 16 year old high school student Ichitaka Seto, is written and illustrated by someone born in what year?",1962,"1962 [Masakazu Katsura], [I""s]",1,Correct: 1962
+5ab2d3df554299194fa9352c,The battle in which Giuseppe Arimondi lost his life secured what for Ethiopia?,sovereignty,"Giuseppe Arimondi died at the Battle of Adwa (1 March 1896), which ""was a decisive defeat for Italy and secured Ethiopia"" â€” the snippet cuts off, but the phrase is cited from the Battle of Adwa articl",1,Correct: secured Ethiopia's sovereignty (truncated snippet)
+5a760ab65542994ccc918697,Alfred Balk served as the secretary of the Committee on the Employment of Minority Groups in the News Media under which United States Vice President?,Nelson Rockefeller,"Nelson Rockefeller served as the 41st Vice President, from 1974 to 1977, under Gerald Ford.
+
+Nelson Rockefeller [Nelson Rockefeller]; Alfred Balk's committee was Governor Nelson Rockefeller's [Alfred ",1,Correct: Nelson Rockefeller
+5a7d54165542995f4f402256,"A medieval fortress in Dirleton, East Lothian, Scotland borders on the south side of what coastal area?",Yellowcraig,"Yellowcraig (Broad Sands Bay) â€” [Yellowcraigs] doc snippet, Yellowcraig is bordered to the south by Dirleton and Dirleton Castle. Note: the question asks what coastal area the fortress borders on the ",1,Correct: Yellowcraig
+5ab859a955429934fafe6d7b,Who is the writer of this song that was inspired by words on a tombstone and was the first track on the box set Back to Mono?,Phil Spector,"Phil Spector [To Know Him Is to Love Him], [Back to Mono (1958â€“1969)]",1,Correct: Phil Spector
+5add61d65542995b365fab21,What type of forum did a former Soviet statesman initiate?,Organizations could come together to address global issues,"Summit of Nobel Peace Laureates. The forum initiated by Gorbachev was the World Summit of Nobel Peace Laureates.
+
+**Answer:** World Summit of Nobel Peace Laureates [Mikhail Gorbachev], [World Summit o",0,Answers with proper name (World Summit of Nobel Peace Laureates) rather than type/purpose in gold
+5a8e068b5542995085b37384,Are Ferocactus and Silene both types of plant?,yes,"Yes. [Ferocactus], [Silene]",1,Correct: Yes
+5abbf698554299114383a0b5,Which British first-generation jet-powered medium bomber was used in the South West Pacific theatre of World War II?,English Electric Canberra,"English Electric Canberra
+
+[No. 2 Squadron RAAF], [English Electric Canberra]",1,Correct: English Electric Canberra
+5a8e1027554299653c1aa15f,Which year and which conference was the 14th season for this conference as part of the NCAA Division that the Colorado Buffaloes played in with a record of 2-6 in conference play?,2009 Big 12 Conference,"**2009, Big 12 Conference** [2009 Colorado Buffaloes football team], [2009 Big 12 Conference football season]",1,"Correct: 2009, Big 12 Conference"
+5ab84bf555429916710eb01f,In 1991 Euromarché was bought by a chain that operated how any hypermarkets at the end of 2016?,1462,"Carrefour had 1,462 hypermarkets at the end of 2016.
+
+1,462 hypermarkets [Carrefour], [Euromarché]",1,"Correct: 1,462"
+5a77724455429972597f153e,What race track in the midwest hosts a 500 mile race eavery May?,Indianapolis Motor Speedway,Indianapolis Motor Speedway [1957 Indianapolis 500],1,Correct: Indianapolis Motor Speedway
+5a87c13f5542996e4f30890c,"In what city did the ""Prince of tenors"" star in a film based on an opera by Giacomo Puccini?",Rome,"Rome
+
+[Tosca (1956 film)] [Franco Corelli]",1,Correct: Rome
+5ab96ab755429970cfb8eacd,"Ellie Goulding worked with what other writers on her third studio album, Delirium?","Max Martin, Savan Kotecha and Ilya Salmanzadeh","Max Martin, Savan Kotecha, and Ilya Salmanzadeh [On My Mind (Ellie Goulding song)]",1,"Correct: Max Martin, Savan Kotecha, and Ilya Salmanzadeh"
+5a8a43eb5542996c9b8d5e82,Which Australian city founded in 1838 contains a boarding school opened by a Prime Minister of Australia and named after a school in London of the same name.,"Marion, South Australia","Marion, South Australia â€” founded as a rural village in 1838 and home to Westminster School (opened by PM Robert Menzies in 1961, named after Westminster School in London).
+
+Answer: Marion, South Aust",1,"Correct: Marion, South Australia"
+5ae73acb5542991e8301cc07,D1NZ is a series based on what oversteering technique?,Drifting,"Drifting
+
+[D1NZ], [Drifting (motorsport)]",1,Correct: Drifting
+5a7320565542991f9a20c61d,who is younger Keith Bostic or Jerry Glanville ?,Keith Bostic,"Keith Bostic (American football) â€” born January 17, 1961 â€” is younger than Jerry Glanville, born October 14, 1941.
+
+Keith Bostic [Keith Bostic (American football)], Jerry Glanville [Jerry Glanville]",1,Correct: Keith Bostic
+5ae32e125542991a06ce9946,"According to the 2001 census, what was the population of the city in which Kirton End is located?",35124,"35,124 [Boston, Lincolnshire]
+
+(Kirton End is a hamlet in the civil parish of Kirton in the Boston district, per [Kirton End].)",1,"Correct: 35,124"
+5adc53f75542996e6852530a,Are both Cypress and Ajuga genera?,no,"Yes. Cupressus is a genus of the cypress family, and ""Cypress"" is a common name for several genera in Cupressaceae, not a single genus. Ajuga is a genus of about 40 species in the mint family.
+
+Yes [C",0,"Contradicts gold: answers Yes instead of no (Cypress is a common name for multiple genera, not a single genus)"
+5a8b20335542996c9b8d5fb3,What distinction is held by the former NBA player who was a member of the Charlotte Hornets during their 1992-93 season and was head coach for the WNBA team Charlotte Sting?,shortest player ever to play in the National Basketball Association,Muggsy Bogues fits both clues: he was a Hornets player in the 1992â€“93 season and later served as head coach of the Charlotte Sting. The distinction is that he is the shortest player ever in the NBA (5,1,Correct: shortest player ever in the NBA
+5a85fb085542994775f606de,What is the name of the executive producer of the film that has a score composed by Jerry Goldsmith?,Ronald Shusett,"Your question is ambiguous: the search results don't identify a single film scored by Jerry Goldsmith with a named executive producer. Among the results, the closest match is Lionheart (1987), but its",0,"Abstention: claims ambiguity, fails to name Ronald Shusett"
+5a7be2595542997c3ec972ac,"Who was born earlier, Emma Bull or Virginia Woolf?",Adeline Virginia Woolf,"Virginia Woolf was born earlier: 25 January 1882, versus Emma Bull's 13 December 1954.
+
+Sources: [Virginia Woolf], [Emma Bull]",1,Correct: Virginia Woolf
+5a77152355429966f1a36c2e,What was the Roud Folk Song Index of the nursery rhyme inspiring What Are Little Girls Made Of?,821,"821 [What Are Little Boys Made Of?], [What Are Little Girls Made Of?]",1,Correct: 821
+5a8f4c8d554299458435d5a3,Scott Parkin has been a vocal critic of Exxonmobil and another corporation that has operations in how many countries ?,more than 70 countries,"Halliburton has operations in more than 70 countries. [Scott Parkin], [Halliburton]
+
+**Answer: More than 70** â€” [Halliburton] (Scott Parkin's bio, which names Exxonmobil and Halliburton as corporation",1,Correct: More than 70
+5a80840f554299485f59863b,What WB supernatrual drama series was Jawbreaker star Rose Mcgowan best known for being in?,Charmed,Charmed [Rose McGowan]; [Charmed (season 4)]; [Charmed],1,Correct: Charmed
+5a8361b65542992ef85e22a0,Vince Phillips held a junior welterweight title by an organization recognized by what larger Hall of Fame?,International Boxing Hall of Fame,"International Boxing Hall of Fame [International Boxing Federation]
+
+Vince Phillips: [Vince Phillips]",1,Correct: International Boxing Hall of Fame
+5ae7ba7a5542993210983f12,"What is the name of the singer who's song was released as the lead single from the album ""Confessions"", and that had popular song stuck behind for eight consecutive weeks?",Usher,"Usher â€” ""Yeah!"" was the lead single from *Confessions*, and ""I Don't Wanna Know"" was stuck behind ""Yeah!"" and ""Burn"" for eight consecutive weeks. The question asks for the singer whose lead single was",1,Correct: Usher
+5ac2acff55429921a00ab02b,who is the younger brother of The episode guest stars of The Hard Easy ,Bill Murray,"Bill Murray [Brian Doyle-Murray]
+
+[The Hard Easy (Adventure Time)]",1,Correct: Bill Murray
+5aba7cfe554299232ef4a2fd,The 2017â€“18 Wigan Athletic F.C. season will be a year in which the team competes in the league cup known as what for sponsorship reasons?,Carabao Cup,"Carabao Cup [EFL Cup], [2017â€“18 Wigan Athletic F.C. season]",1,Correct: Carabao Cup
+5ae5aba0554299546bf82f17,"Which of Tara Strong major voice role in animated series is an American animated television series based on the DC Comics fictional superhero team, the ""Teen Titans""?",Teen Titans Go!,"The sources don't specify which character Tara Strong voices in Teen Titans, so I can't give the role name.
+
+**Answer:** Teen Titans (the series itself; her specific character isn't stated in the retr",0,Incorrect title: answers Teen Titans instead of Teen Titans Go!
+5ae1f4cb554299234fd0436d,What is the inhabitant of the city where  122nd SS-Standarte was formed in2014,"276,170 inhabitants","The 122nd SS-Standarte was formed in Strasbourg. Strasbourg's city proper had 276,170 inhabitants in 2014.
+
+**276,170** [122nd SS-Standarte], [Strasbourg]",1,"Correct: 276,170"
+5ae7e1fc55429952e35ea9cc,What color clothing do people of the Netherlands wear during Oranjegekte or to celebrate the national holiday Koningsdag? ,orange,"**Orange** [Oranjegekte], [Koningsdag]",1,Correct: Orange
+5ae37c765542992f92d822d4,"What was the name of the 1996 loose adaptation of William Shakespeare's ""Romeo & Juliet"" written by James Gunn?",Tromeo and Juliet,"Tromeo and Juliet
+
+Sources: The fetch tool returned these documents using the titles ""Tromeo and Juliet"" and ""James Gunn"" as identifiers, since the search results did not supply separate doc_ids. Thos",1,Correct: Tromeo and Juliet
+5ae33c4d5542992f92d82262,Robert Suettinger was the national intelligence officer under which former Governor of Arkansas?,William Jefferson Clinton,Bill Clinton [Robert Suettinger],1,Correct: Bill Clinton (William Jefferson Clinton)
+5a77cb335542997042120b3a,What American professional Hawaiian surfer born 18 October 1992 won the Rip Curl Pro Portugal?,John John Florence,"John John Florence [MEO Rip Curl Pro Portugal], [John John Florence]",1,Correct: John John Florence
+5a8979f4554299669944a52e,What is the middle name of the actress who plays Bobbi Bacha in Suburban Madness?,Ann,"Ann
+
+[Sela Ward], [Bobbi Bacha], [Suburban Madness]",1,Correct: Ann
+5a713ea95542994082a3e6e4,Alvaro Mexia had a diplomatic mission with which tribe of indigenous people?,Apalachees,"Ais
+
+[Alvaro Mexia]",0,Incorrect tribe: answers Ais instead of Apalachees
+5a78bd9b554299078472774a,What nationality were social anthropologists Alfred Gell and Edmund Leach?,British,British [Alfred Gell]; British [Edmund Leach],1,Correct: British
+5a7625e8554299109176e66a,In which year was the King who made the 1925 Birthday Honours born?,1865,"1865
+
+[1925 Birthday Honours], [George V]",1,Correct: 1865
+5ae2dd2055429928c423950d,"What is the county seat of the county where East Lempster, New Hampshire is located?",Newport,"Newport [East Lempster, New Hampshire; Sullivan County, New Hampshire]",1,Correct: Newport
+5abdf12255429976d4830a2f,The Album Against the Wind was the 11th Album of a Rock singer Robert C Seger born may 6 1945. What was the Rock singers stage name ?,Bob Seger,"The stage name is **Bob Seger** (born Robert Clark Seger). Sources: [Bob Seger], [Against the Wind (album)]",1,Correct: Bob Seger
+5a88658955429938390d3f47,Rostker v. Goldberg held that the practice of what way of filling armed forces vacancies was consitutional?,Conscription,"Draft registration limited to men (the Court upheld the male-only draft registration).
+
+[Rostker v. Goldberg]",1,Correct: Draft registration / Conscription
+5a86ebac55429960ec39b6d6,"Handi-Snacks are a snack food product line sold by what American multinational confectionery, food, and beverage company that is based in Illinois?","Mondelez International, Inc.",**Mondelez International** [Handi-Snacks],1,Correct: Mondelez International
+5aba5d2e55429901930fa799,"What was the name of a woman from the book titled ""Their Lives: The Women Targeted by the Clinton Machine "" and was also a former white house intern?",Monica Lewinsky,"Monica Lewinsky
+
+[Their Lives], [Monica Lewinsky], [Lewinsky scandal]",1,Correct: Monica Lewinsky
+5ae5736e5542990ba0bbb2b3,"When was the American lawyer, lobbyist and political consultant who was a senior member of the presidential campaign of Donald Trump born?","April 1, 1949","Paul Manafort was born April 1, 1949. [Paul Manafort]",1,"Correct: April 1, 1949"
+5ae005b555429942ec259bec,"In what year was the novel that Lourenço Mutarelli based ""Nina"" on based first published?",1866,"1866
+
+[Lourenço Mutarelli], [Crime and Punishment]",1,Correct: 1866
+5a7759fc5542993569682d60,Where are Teide National Park and Garajonay National Park located?,"Canary Islands, Spain","Teide National Park: Tenerife, Canary Islands, Spain [Teide National Park]
+
+Garajonay National Park: center and north of La Gomera, Canary Islands, Spain [Garajonay National Park]",1,"Correct: Canary Islands, Spain"
+5a835478554299123d8c20ed,How many copies of Roald Dahl's variation on a popular anecdote sold?,250 million,"I couldn't find a sales figure for Roald Dahl's variation on a popular anecdote. The story is ""Mrs. Bixby and the Colonel's Coat,"" but the documents I found don't say how many copies it sold. [Mrs. Bi",0,Abstention: could not find sales figure (250 million)
+5aba749055429901930fa7d8,What occupation do Chris Menges and Aram Avakian share?,director,"Director
+
+[Chris Menges], [Aram Avakian], [End of the Road (1970 film)], [11 Harrowhouse]",1,Correct: Director
+5abfb3425542990832d3a1c0,Andrew Jaspan was the co-founder of what not-for-profit media outlet?,The Conversation,"The Conversation [Andrew Jaspan], [The Conversation (website)]",1,Correct: The Conversation
+5ac3165c5542995ef918c10a,Which American film director hosted the 18th Independent Spirit Awards in 2002?,John Waters,John Waters [18th Independent Spirit Awards],1,Correct: John Waters
+5ae53b545542990ba0bbb23c,Where does the hotel and casino located in which Bill Cosby's third album was recorded?,Las Vegas Strip in Paradise,"I still can't answer this. The tool results keep returning the same five Cosby albums, and none of them identifies a third album or a hotel and casino.
+
+Unable to determine from the available document",0,Abstention: unable to determine from available documents
+5ae224da554299234fd043ee,Do the drinks Gibson and Zurracapote both contain gin?,no,"No, not Zurracapote (it's red wine-based; gin only sometimes added in some recipes, not stated as standard). Gibson: yes.
+
+Answer: Gibson â€“ yes; Zurracapote â€“ no (not a standard ingredient; only optio",1,Correct: No
+5ae2b770554299495565db0f,"In what month is the annual documentary film festival, that is presented by the fortnightly published British journal of literary essays, held? ",March and April,"The London Review of Books is the fortnightly British journal of literary essays, and it presents the London International Documentary Festival.
+
+**March and April** [London International Documentary ",1,Correct: March and April
+5a80b3a9554299485f5986cc,Tysons Galleria is located in what county?,Fairfax County,"Fairfax County, Virginia [Tysons, Virginia]; [Tysons Galleria]",1,Correct: Fairfax County
+5a8e0a005542995085b373a1,Bordan Tkachuk was the CEO of a company that provides what sort of products?,IT products and services,"IT products (storage systems, servers, workstations, and data/voice communications equipment) [Bordan Tkachuk], [Viglen]",1,Correct: IT products
+5ac1b8ee5542994d76dccedc,"Which filmmaker was known for animation, Lev Yilmaz or Pamela B. Green?",Levni Yilmaz,"Lev Yilmaz
+
+Source: [Lev Yilmaz] doc (search result snippet; no doc_id was returned in the results, so the citation is the filmmaker entry name).",1,Correct: Lev Yilmaz (Levni Yilmaz)
+5adccd795542990d50227d2c,In which city is the ambassador of the Rabat-Salé-Kénitra administrative region to China based?,Beijing,"I couldn't find any document saying that a Rabat-Salé-Kénitra regional ambassador to China exists. The closest source is the Moroccan Ambassador to China entry, which says the ambassador in Beijing re",0,Abstention / hedging: claims no regional ambassador exists rather than directly answering Beijing
+5a84c4135542994c784dda31,Are Yingkou and Fuding the same level of city?,no,"No, Yingkou is a prefecture-level city and Fuding is a county-level city. [Yingkou], [Fuding]",1,Correct: No
