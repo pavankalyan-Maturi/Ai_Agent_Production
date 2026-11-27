@@ -1,0 +1,34 @@
+# LiteLLM proxy (pinned in deploy/litellm/Dockerfile). Routing, retries and provider fallbacks only.
+# Tenant-scoped caching and per-key rate limits live in the API (gateway/cache.py,
+# gateway/ratelimit.py) because LiteLLM's cache keys do not carry our tenant id (ADR 011).
+model_list:
+  - model_name: agent-default
+    litellm_params: {model: anthropic/claude-sonnet-5-5, api_key: os.environ/ANTHROPIC_API_KEY}
+  - model_name: agent-fast
+    litellm_params: {model: anthropic/claude-haiku-5-5, api_key: os.environ/ANTHROPIC_API_KEY}
+  # Mock upstream (gateway/mock_llm.py) standing in for vLLM until Phase 7.
+  - model_name: mock
+    litellm_params: {model: openai/mock, api_base: os.environ/MOCK_LLM_BASE, api_key: none}
+  - model_name: mock-flaky
+    litellm_params: {model: openai/mock-flaky, api_base: os.environ/MOCK_LLM_BASE, api_key: none}
+  - model_name: mock-slow
+    litellm_params: {model: openai/mock-slow, api_base: os.environ/MOCK_LLM_BASE, api_key: none}
+
+router_settings:
+  num_retries: 1
+  timeout: 60
+  fallbacks:
+    - agent-default: [agent-fast]
+    - mock-flaky: [mock]
+
+litellm_settings:
+  drop_params: true
+  turn_off_message_logging: true  # no prompts/completions in proxy logs or callbacks (PII)
+  cache: false                    # see header: our cache is tenant-scoped
+
+general_settings:
+  master_key: os.environ/LITELLM_MASTER_KEY
+  disable_spend_logs: true
+  # Only inference + health are reachable; key/user/team/config/pass-through admin routes are not.
+  allowed_routes: ["/chat/completions", "/v1/chat/completions", "/health/liveliness",
+                   "/health/readiness", "/v1/models", "/models"]

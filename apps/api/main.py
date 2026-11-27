@@ -12,7 +12,7 @@ from opentelemetry.sdk.trace import TracerProvider
 from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 from starlette.routing import Match
 
-from apps.api import health, ingest, security
+from apps.api import chat, health, ingest, security
 from apps.api.auth import verifier_from_settings
 from apps.api.settings import Settings, get_settings
 from apps.api.telemetry import HTTP_LATENCY, HTTP_REQUESTS, build_tracer_provider, instrument
@@ -62,6 +62,7 @@ def create_app(
     readiness_checks: dict[str, health.Check] | None = None,
     ingest_deps: Callable[[], tuple[Any, Any]] | None = None,
     governance: Any = None,
+    chat_deps: Callable[[], Any] | None = None,
 ) -> FastAPI:
     settings = settings or get_settings()
     provider = tracer_provider or build_tracer_provider(settings)
@@ -79,6 +80,8 @@ def create_app(
     )
     app.include_router(health.router)
     app.include_router(ingest.router)
+    app.include_router(chat.router)
+    app.state.chat_deps = chat_deps or chat.build_deps(settings)
     app.state.ingest_deps = ingest_deps or _default_ingest_deps(settings)
     app.state.governance = governance
     app.include_router(security.build_router(lambda: _governance(app)))

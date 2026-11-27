@@ -64,8 +64,16 @@ class Settings(BaseSettings):
     mcp_upstream_url: str = "http://localhost:8001/mcp"  # where the gateway forwards
     mcp_approval_token: SecretStr | None = None
 
-    # Placeholder for the LiteLLM virtual key (Phase 4). Never logged.
+    # LLM gateway (Phase 4, ADR 011). LiteLLM proxy key; never logged.
     llm_api_key: SecretStr | None = None
+    llm_gateway_url: str = "http://localhost:4000"
+    llm_model: str = "agent-default"
+    llm_models: list[str] = ["agent-default", "agent-fast", "mock", "mock-flaky", "mock-slow"]
+    rate_limit_rpm: int = 60  # per (tenant, caller sub)
+    rate_limit_tpm: int = 100_000
+    cache_ttl_s: int = 3600
+    cache_semantic: bool = True  # needs fastembed; falls back to exact-only without it
+    cache_semantic_threshold: float = 0.9
 
 
 @lru_cache

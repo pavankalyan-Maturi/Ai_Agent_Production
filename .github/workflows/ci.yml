@@ -10,6 +10,13 @@ jobs:
   lint-type-test:
     runs-on: ubuntu-24.04
     timeout-minutes: 10
+    services:
+      redis:  # gateway rate-limit/cache tests run against real Redis (Lua + TIME)
+        image: redis:7.4-alpine
+        ports: ["6379:6379"]
+        options: --health-cmd "redis-cli ping" --health-interval 2s --health-retries 30
+    env:
+      PAP_TEST_REDIS_URL: redis://localhost:6379/0
     steps:
       - uses: actions/checkout@v5
       - uses: astral-sh/setup-uv@v7
@@ -17,7 +24,7 @@ jobs:
       - run: uv sync --frozen --python 3.12
       - run: uv run ruff check .
       - run: uv run ruff format --check .
-      - run: uv run mypy apps retrieval evals agent mcp_server agent_a2a guardrails
+      - run: uv run mypy apps retrieval evals agent mcp_server agent_a2a guardrails gateway
       - run: uv run pytest -q
 
   integration:

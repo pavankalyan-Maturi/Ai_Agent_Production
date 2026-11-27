@@ -18,6 +18,9 @@ jobs:
       - name: Build api image
         uses: docker/build-push-action@v6
         with: {context: ., load: true, tags: "pap-api:dev", cache-from: type=gha, cache-to: "type=gha,mode=max"}
+      - name: Build litellm image
+        uses: docker/build-push-action@v6
+        with: {context: ., file: deploy/litellm/Dockerfile, load: true, tags: "pap-litellm:dev", cache-from: type=gha, cache-to: "type=gha,mode=max,scope=litellm"}
       - name: Boot core+obs(+llmobs) and assert acceptance
         run: scripts/compose_smoke.sh ${{ (github.event_name != 'workflow_dispatch' || inputs.llmobs) && '--llmobs' || '' }}
       - name: Probe latency

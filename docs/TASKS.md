@@ -34,10 +34,10 @@ Acceptance: DLQ test, filtered-recall test, ablation row per config with CI link
 - P3.4 A2A card (supported_interfaces, skills, securityRequirements), JWS signing + verification test — IN REVIEW (PR C, ADR 008)
 
 ## Phase 4: Gateway  [CHECKPOINT: load-test review]
-- P4.1 LiteLLM proxy hardened (non-root, admin UI off, risky routes blocked) + ADR with CVE list
-- P4.2 per-key rate limits (Redis), exact + semantic cache with false-hit test, fallbacks
-- P4.3 SSE streaming endpoint; disconnect/cancel propagation
-- P4.4 Locust scenario; p50/p95, cache savings -> RESULTS.md
+- P4.1 LiteLLM proxy hardened (non-root, admin UI off, risky routes blocked) + ADR with CVE list — IN REVIEW (ADR 011)
+- P4.2 per-key rate limits (Redis), exact + semantic cache with false-hit test, fallbacks — IN REVIEW
+- P4.3 SSE streaming endpoint; disconnect/cancel propagation — IN REVIEW
+- P4.4 Locust scenario; p50/p95, cache savings -> RESULTS.md — IN REVIEW (local run; compose run is yours)
 
 ## Phase 5: Guardrails  [CHECKPOINT: security results review]
 - P5.0 OIDC auth (Keycloak RS, scopes, tenant from token) replacing the admin key — IN REVIEW (PR A, ADR 009; Keycloak compose profile NOT ADDED)
@@ -45,7 +45,6 @@ Acceptance: DLQ test, filtered-recall test, ablation row per config with CI link
 - P5.2 injected-doc suite + spotlighting — IN REVIEW (PR A; model ASR from CI eval-security)
 - P5.3 plan/data separation + taint tags — IN REVIEW (PR B, ADR 010)
 - P5.4 step-level tool-call checker + trace-level policy; latency + false-block metrics — IN REVIEW (PR B; Haiku numbers from CI)
-- Note: Phase 4 (gateway) not built yet; user chose Phase 5 first (2026-11-27).
 
 ## Phase 6: Evals + CI gate  [CHECKPOINT: human labels + threshold sign-off]
 - P6.1 trajectory evals; P6.2 judge calibration (kappa) vs evals/labels/; P6.3 MAST tagging + histogram

@@ -20,7 +20,7 @@ from typing import Annotated, Any
 import jwt
 from fastapi import Depends, Header, HTTPException, Request
 
-ADMIN, INGEST = "pap:admin", "pap:ingest"
+ADMIN, INGEST, CHAT = "pap:admin", "pap:ingest", "pap:chat"
 TENANT_RE = re.compile(r"^[a-z0-9][a-z0-9_-]{0,62}$")
 _ASYMMETRIC = {"RS256", "RS384", "RS512", "PS256", "ES256", "ES384", "EdDSA"}
 
@@ -116,3 +116,4 @@ def require(scope: str) -> Callable[..., Principal]:
 
 Admin = Annotated[Principal, Depends(require(ADMIN))]
 Ingester = Annotated[Principal, Depends(require(INGEST))]
+Chatter = Annotated[Principal, Depends(require(CHAT))]

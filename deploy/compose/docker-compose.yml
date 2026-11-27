@@ -100,11 +100,41 @@ services:
       PAP_BROKER_URL: amqp://pap:${RABBITMQ_PASSWORD:-pap-dev-only}@rabbitmq:5672//
       # Collector only exists in obs/full; export fails soft (batch processor drops) otherwise.
       PAP_OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
+      PAP_LLM_GATEWAY_URL: http://litellm:4000
+      PAP_LLM_API_KEY: ${LITELLM_MASTER_KEY:-sk-pap-dev-only}
     depends_on:
       pgbouncer: {condition: service_started}
       redis: {condition: service_healthy}
       rabbitmq: {condition: service_healthy}
     ports: ["127.0.0.1:8000:8000"]
+
+  # ---------------- gateway (Phase 4, ADR 011) ----------------
+  # No published ports: only the api reaches LiteLLM, on the compose network.
+  mock-llm:
+    image: pap-api:dev
+    profiles: [core, full]
+    command: ["uvicorn", "gateway.mock_llm:app", "--host", "0.0.0.0", "--port", "8010"]
+    environment: {MOCK_LATENCY_S: "${MOCK_LATENCY_S:-0.05}"}
+
+  litellm:
+    build: {context: ../.., dockerfile: deploy/litellm/Dockerfile}
+    image: pap-litellm:dev
+    profiles: [core, full]
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    environment:
+      LITELLM_MASTER_KEY: ${LITELLM_MASTER_KEY:-sk-pap-dev-only}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      MOCK_LLM_BASE: http://mock-llm:8010/v1
+    depends_on: [mock-llm]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request as u; u.urlopen('http://127.0.0.1:4000/health/liveliness')"]
+      interval: 5s
+      timeout: 5s
+      start_period: 30s
+      retries: 20
 
   # ---------------- obs ----------------
   otel-collector:

@@ -290,3 +290,41 @@ Scripted worst case (the model obeys every injection it can read; no spend):
   here; read the `eval-security` job summary on the PR B run.
 - Limits: the policy alone does nothing for answer-text attacks; camel's 0% on answers depends on
   typed validation and would not hold for the `text` type.
+
+## Phase 4: LLM gateway (ADR 011)
+All numbers measured in the cloud sandbox on 2026-11-27, CPU only, mock upstream.
+
+**LiteLLM 1.110.0 run locally** (pip install, `gateway/litellm.yaml`, mock upstream):
+- Fallback: `mock-flaky` (503) -> `mock` answered; mock saw 3 requests (1 + 1 retry + fallback).
+- Admin routes with the master key: `/key/generate`, `/config/update`, `/user/new`, `/model/new`
+  -> 403; `/docs` 404; no key -> 401. `/ui` still serves the static bundle (see ADR 011).
+- Disconnect: cancelling a `mock-slow` stream through LiteLLM after 0.5 s -> upstream mock
+  recorded 1 cancelled stream (propagates end to end).
+
+**Locust 2.47.0, 60 s, 50 users, wait 0.5-1.5 s** (API 2 uvicorn workers -> LiteLLM -> mock with
+50 ms latency; local Redis; exact cache only; 70% popular prompts / 30% unique):
+
+| SSE metric (ms) | p50 | p95 | p99 | n |
+|---|---|---|---|---|
+| first token, cache miss | 87 | 190 | 250 | 918 |
+| full stream, cache miss | 110 | 260 | 350 | 918 |
+| first token, exact hit | 5 | 9 | 18 | 1860 |
+
+0 failures, 46 req/s (user-bound, not saturation). Hit rate 67% on this synthetic mix. Gateway
+overhead on a miss is ~35 ms p50 over the 50 ms mock (API + LiteLLM). NOT MEASURED: compose
+stack, real providers, saturation point. Runbook: `loadtest/README.md`.
+
+**Cache** (`scripts/bench_gateway.py`, hash-bow embedder, 35 templated pairs, real Redis):
+
+| threshold | guard | paraphrase hits | false hits (of 20) |
+|---|---|---|---|
+| 0.9 | off | 10/15 | 5 (all negation) |
+| 0.9 | on | 10/15 | 0 |
+| 0.8 | off | 15/15 | 20 |
+| 0.8 | on | 15/15 | 10 (entity 5, metric 5) |
+
+Synthetic 1000-request Zipf workload: 84.4% hit rate (838 exact, 6 semantic), Haiku spend avoided
+$0.15 at 800/200 tokens per call. Lookup p50/p95: exact hit 0.11/0.18 ms, miss (exact + scan of
+up to 256 vectors) 1.6/2.8 ms. Did not replicate the large semantic-cache gains often quoted:
+on this workload rewording is rare, so exact hits dominate; semantic adds <1 pt.
+Real-embedder (bge-small) false hits NOT MEASURED.

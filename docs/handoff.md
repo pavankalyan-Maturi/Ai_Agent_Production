@@ -1,34 +1,35 @@
 # Handoff
 
 ## Done
-- Phases 0-3 merged (PR #1-#8). Phase 5 PR A merged (PR #9, ADR 009). Phase 4 (gateway) not built.
-- Phase 5 PR B (this PR, not merged), ADR 010:
-  - **P5.3** `guardrails/taint.py`: taint ledger rebuilt from the transcript; plan/data separation
-    (`Guardrails(quarantine=model)`): data-tool output becomes `$vN`, the planner sees handles,
-    `extract` runs a tool-less reader with typed validation (number/date/name/text); variables are
-    filled into tool args and the answer after the plan is fixed.
-  - **P5.4** `guardrails/policy.py`: step rules (taint_to_sink, tainted_var_to_sink) and trace rules
-    (sink_without_intent, sink_budget, denial_limit), checked in `plan` before the approval pause;
-    denials audited through mcp-rbac-gateway's audit log (`approver=policy:<rule>`).
-  - Suite: +10 benign_action cases (70 total); arms `policy` and `camel`; scripted worst-case run.
-  - PR A's Haiku ASR recorded in RESULTS (38% / 25% / 18%).
+- Phases 0-3 and 5 merged (PR #1-#10). Phase 4 (this PR, not merged), ADR 011:
+  - **P4.1** LiteLLM 1.110.0 in our own image (`deploy/litellm/Dockerfile`, uid 10001, read-only,
+    no port), `gateway/litellm.yaml`: aliases, retries, fallbacks, `allowed_routes`, admin UI off.
+  - **P4.2** `gateway/ratelimit.py` (Redis Lua token buckets per tenant+sub, rpm+tpm, 429 +
+    Retry-After); `gateway/cache.py` (tenant-scoped exact + semantic with salient-token guard);
+    `gateway/cache_pairs.py` false-hit set; fallbacks in LiteLLM.
+  - **P4.3** `POST /v1/chat/stream` (scope `pap:chat`) in `apps/api/chat.py`; disconnect closes
+    the upstream stream. `gateway/client.py`: `GatewayModel` (agent ChatModel) + `StreamClient`.
+  - **P4.4** `loadtest/locustfile.py` + runbook; `scripts/bench_gateway.py`.
+  - `gateway/mock_llm.py`: OpenAI-compatible mock (vLLM stand-in). CI `lint-type-test` gets a
+    Redis service; compose gets `mock-llm` + `litellm`; smoke checks fallback + admin 403.
 
 ## Verified here
-- Gate: ruff, format, mypy, 145 unit tests (7 new).
-- Scripted worst case: policy exfil ASR 100% -> 0%, answer ASR unchanged (100%); camel 0% ASR;
-  0/30 false blocks; policy check p50 0.014 ms.
+- Gate: ruff, format, mypy (+gateway), 156 unit tests (11 new, real Redis + real uvicorn mock).
+- LiteLLM 1.110.0 run locally: fallback, admin routes 403, disconnect propagates to upstream.
+- Locust 50 users, 60 s: miss first-token p50 87 / p95 190 ms, exact hit p50 5 ms, 0 failures.
+- Cache false hits at 0.9: 5/20 without guard, 0/20 with. Numbers in RESULTS.md.
 
 ## Not verified
-- Haiku 5.5 on the `policy` and `camel` arms (ASR, benign accuracy, false blocks): CI
-  `eval-security` job summary, cap $1 (expected ~$0.1-0.2).
+- Docker images and compose-smoke (`pap-litellm:dev` build, healthcheck): CI compose-smoke.
+- Real providers through LiteLLM (no paid calls this thread); semantic cache with bge-small.
 
 ## Open
-- Move sink definitions into sentinel.yaml when the library has a place for them.
-- Keycloak compose profile; approver from token + tenant-filtered approvals; merge JwtVerifiers.
-- Phase 4 gateway. HotpotQA memory gate red on main (separate task).
+- Agent graph does not use cache/limiter yet (only the SSE route); TPM charged on an estimate.
+- Semantic guard misses entity/metric swaps; fastembed not in the api image (exact-only there).
+- From before: sinks into sentinel.yaml, Keycloak compose profile, HotpotQA memory gate red.
 
 ## Next step
-Review PR B and the eval-security numbers. Then Phase 4 or the memory-gate fix, in a fresh thread.
+Review this PR and compose-smoke; optionally run `loadtest/README.md`. Then Phase 6.
 
 ## Versions pinned
-docs/SPEC.md Pins table, ADR 002-010 (no new dependencies in PR B).
+docs/SPEC.md Pins table (LiteLLM 1.110.0, locust 2.47.0 via uvx, httpx made explicit), ADR 002-011.
