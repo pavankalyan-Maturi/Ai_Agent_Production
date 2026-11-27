@@ -166,3 +166,38 @@ Tests (`tests/security/test_governance.py`, real `sentinel.yaml`), all passing l
 - A direct call waits on `/api/v1/security/approvals` and runs after approval.
 - The API returns 503 with no key, 401 with a wrong key, and only that tenant's audit rows.
 - Integration (Postgres): `create_ticket` is idempotent and tenant-scoped.
+
+## Phase 3B: MCP server + gateway
+
+Run with `scripts/bench_mcp.py -n 1000` in the local sandbox. Transports are in-process ASGI, the fake tool costs nothing, and the audit is SQLite. The numbers cover protocol, auth and gateway cost only, with no network or retrieval.
+
+| Path (SDK client, mode 2026-07-28, `tools/call`) | p50 | p95 |
+|---|---|---|
+| Direct to the MCP server | 2.77 ms | 3.27 ms |
+| Through mcp-rbac-gateway StatelessHttpProxy | 6.10 ms | 7.91 ms |
+
+Tests (`tests/mcp/`) all pass locally: 23 unit tests and 1 integration test against Postgres.
+
+**Server, direct**
+- **SDK client, all three modes.** `auto` negotiates 2026-07-28, a pinned `2026-07-28` works, and `legacy` negotiates 2025-11-25. In every mode list_tools and call_tool succeed.
+- **Tenant.** It comes only from the token. A `tenant_id` argument is ignored.
+- **Bad tokens.** Each of these is rejected (401, or 403 for scope) and no tool runs:
+  - no token
+  - wrong audience or issuer
+  - expired
+  - bad signature
+  - bad or missing tenant
+  - missing scope
+
+  The 401 carries `resource_metadata`. RFC 9728 metadata lists the resource, the issuer (exact, no trailing slash) and the scope.
+- **Stateless replicas.** Two independent replicas sit behind a round-robin transport with no affinity. Six calls succeeded and both replicas served at least 3 requests. The kind e2e is NOT RUN.
+
+**Through the gateway**
+- **Researcher.** Allowed. The OAuth `Authorization` header is forwarded and `X-Sentinel-Token` is not. `_meta` (protocol version, `traceparent`) arrives upstream unchanged. The audit row is `researcher / search / allowed / http-stateless` with the same trace id.
+- **Redaction.** PII in results comes back as `[REDACTED:email]`.
+- **No role token.** No tools are listed, and calls are blocked (`anonymous` / blocked_policy). A wrong role token gets 401.
+- **Blocks.** `../` in doc_id → blocked_policy. An injected output → blocked_injection, and the injected text never reaches the client.
+- **Header/body mismatch.** The call gets 400 with error -32020 and nothing is forwarded upstream.
+- **Approvals.** The gateway's `/approvals` needs its token, and the gateway refuses to start without one.
+
+**Integration (Postgres)** Real hybrid search through the gateway and server is tenant-scoped: tenant A never sees tenant B's documents.

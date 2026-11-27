@@ -43,6 +43,15 @@ class Settings(BaseSettings):
     # Admin key for /api/v1/security/* until real auth (Phase 5). Unset = those routes are off.
     admin_api_key: SecretStr | None = None
 
+    # MCP server (Phase 3, ADR 007). OAuth resource server: verifies JWTs it never issues.
+    mcp_jwt_key: SecretStr | None = None  # HS256 secret or RS256/ES256 public key (PEM)
+    mcp_jwt_algorithms: list[str] = ["HS256"]
+    mcp_issuer: str = "http://localhost:9000"
+    mcp_resource_url: str = "http://localhost:8001/mcp"  # the token `aud` (RFC 8707)
+    mcp_allowed_hosts: list[str] = ["localhost:8001", "127.0.0.1:8001"]
+    mcp_upstream_url: str = "http://localhost:8001/mcp"  # where the gateway forwards
+    mcp_approval_token: SecretStr | None = None
+
     # Placeholder for the LiteLLM virtual key (Phase 4). Never logged.
     llm_api_key: SecretStr | None = None
 

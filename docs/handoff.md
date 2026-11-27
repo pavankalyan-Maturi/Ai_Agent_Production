@@ -1,32 +1,39 @@
 # Handoff
 
 ## Done
-- Phases 0-2 merged (PR #1-#5).
-- Phase 3 PR A (this PR, not merged): tool governance with the owner's `mcp-rbac-gateway` 0.2.0 (ADR 006).
-  - `sentinel.yaml`: roles `anonymous` (deny all), `researcher` (read-only), `operator` (+ `create_ticket`, always needs approval). It adds argument rules, secret/PII redaction and injection blocking.
-  - `agent/governance.py`: every tool call in the graph runs policy → input scan → approval → tool → output scan → audit. A blocked call becomes a structured `tool_denied` observation, never a crash.
-  - Approvals: the policy decides, and the LangGraph interrupt waits durably. The approver is recorded in the gateway's audit. Calls made outside the graph wait on the gateway broker.
-  - API: `/api/v1/security/approvals` (the gateway's router) and `/api/v1/security/audit` (tenant-scoped), both behind `PAP_ADMIN_API_KEY`.
-  - New action tool `create_ticket` (tenant-scoped, idempotent).
-
-## Spec deviations (owner request vs library 0.2.0)
-- The import is `mcp_rbac_gateway`, not `mcp_sentinel`.
-- `@guard` can't carry the tenant or call id, so we call the same pipeline steps directly.
-- There is no audit HTTP endpoint in the library, so we wrote one that reads the `events` table.
-- No auth existed, so an admin bearer key was added as a stopgap until Phase 5.
-- No external MCP connections exist yet, so the proxy comes in PR B.
+- Phases 0-2 and Phase 3 PR A merged (PR #1-#6).
+- Phase 3 PR B (this PR, not merged): stateless MCP server behind mcp-rbac-gateway (ADR 007).
+  - `mcp_server/server.py`: MCPServer with `search` and `fetch_doc` (read-only).
+    - Transport: stateless Streamable HTTP, JSON responses, Host allowlist.
+    - Serves 2026-07-28 and 2025-11-25 clients.
+  - `mcp_server/auth.py`: OAuth resource server.
+    - Verifies the JWT: aud is the resource URL, plus iss, exp, scope `pap:search` and `tenant_id`.
+    - The tenant comes only from the token.
+    - Serves RFC 9728 metadata and returns a 401 challenge.
+  - `mcp_server/gateway.py`: the library's `StatelessHttpProxy` in front.
+    - The role comes from `X-Sentinel-Token` (new `token_env` entries in sentinel.yaml).
+    - Forwards `_meta`, `traceparent` and `Authorization` unchanged.
+    - Requires an approval token.
+  - Entry points: `uvicorn --factory mcp_server.app:server_app` and `mcp_server.app:gateway_app`.
+  - `mcp_server` was added to mypy (CI and the CLAUDE.md gate) and to the Dockerfile.
 
 ## Verified here
-- Gate: ruff, format, mypy, full unit suite including 13 new governance tests.
-- Integration against local pgvector: the ticket tool is idempotent and tenant-scoped.
-- Bench: about 2.1 ms p50 per governed call.
+- Gate: ruff, format, mypy (now including mcp_server), and the full unit suite including 23 MCP tests.
+- Integration against local pgvector: 6 passed, including real search through the gateway, tenant-scoped.
+- Bench: about 3.3 ms p50 added by the gateway, in-process.
 
 ## Not verified
-- The approval broker across several API replicas. It lives in memory; the graph pause is the multi-replica path.
-- The Docker image with sentinel.yaml (not built this thread).
+- Two replicas on kind/Kubernetes. Only the in-process round-robin test ran.
+- The gateway with 2025-era clients. The library's stateless proxy is modern-only.
+- JWKS / an RS256 identity provider.
+- The compose services for the MCP server and gateway. None were added; the uvicorn commands are in the README.
+
+## Open
+- Gateway audit rows carry no tenant (a library gap). This and the other library gaps are in /mnt/project-files/phase3/mcp-rbac-gateway-0.3-prompt.md, section 9.
+- When library 0.3 ships, the owner wants a minimal follow-up here that only tests it.
 
 ## Next step
-Review and merge PR A. Then PR B: our stateless MCP server (P3.1/P3.2) behind the gateway's `StatelessHttpProxy`, keeping `_meta`/`traceparent`. Then PR C: the A2A card (P3.4) and P3.3.
+Review and merge PR B. Then PR C: A2A card (P3.4, JWS-signed) and P3.3 tool retrieval (RAG-MCP flag and tool-count eval).
 
 ## Versions pinned
-docs/SPEC.md Pins table, ADR 002-006 (`mcp-rbac-gateway>=0.2.0,<0.3`).
+docs/SPEC.md Pins table, ADR 002-007 (`mcp[cli]==2.0.*` → 2.0.1, `mcp-rbac-gateway>=0.2.0,<0.3`).

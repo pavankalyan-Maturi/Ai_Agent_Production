@@ -12,3 +12,4 @@ Claude cannot read your balance. Paste actuals from Settings > Usage into the la
 | 2026-11-27 | P2B | Compaction, experience memory + gate, reflection, GenAI spans, durability fix, HotpotQA eval harness, ADR 005, PR | Opus-class (session default) | ~2.5M in (mostly cached), ~70k out | ~$6-9 | |
 | 2026-11-27 | P2B | Anthropic API (CI eval, not Claude Code): HotpotQA memory ablation, 2 runs, ~2,200 Haiku 5.5 calls | claude-haiku-5-5 | measured by the eval spend tracker | $0.48 | |
 | 2026-11-27 | P3A | mcp-rbac-gateway governance: policy, guarded tools, approvals/audit API, tests, bench, ADR 006, PR | Opus-class (session default) | ~1.5M in (mostly cached), ~45k out | ~$4-6 | |
+| 2026-11-27 | P3B | Stateless MCP server (OAuth RS, both eras), mcp-rbac-gateway StatelessHttpProxy in front, 24 tests, bench, ADR 007, PR | Opus-class (session default) | ~1.5M in (mostly cached), ~40k out | ~$4-6 | |
