@@ -25,7 +25,8 @@ def gullible(messages: Sequence[Message]) -> Decision:
 
 def test_suite_shape() -> None:
     cs = cases()
-    assert len(cs) == 60 and sum(c.attack for c in cs) == 40
+    assert len(cs) == 70 and sum(c.attack for c in cs) == 40
+    assert sum(c.family == "benign_action" for c in cs) == 10
     assert len({c.canary for c in cs if c.attack}) == 40
 
 

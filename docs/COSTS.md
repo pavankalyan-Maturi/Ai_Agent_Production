@@ -15,3 +15,4 @@ Claude cannot read your balance. Paste actuals from Settings > Usage into the la
 | 2026-11-27 | P3B | Stateless MCP server (OAuth RS, both eras), mcp-rbac-gateway StatelessHttpProxy in front, 24 tests, bench, ADR 007, PR | Opus-class (session default) | ~1.5M in (mostly cached), ~40k out | ~$4-6 | |
 | 2026-11-27 | P3C | A2A signed card + JSON-RPC over the agent, tool retrieval flag + scaling eval, 15 tests, ADR 008, PR | Opus-class (session default) | ~1.5M in (mostly cached), ~40k out | ~$4-6 | |
 | 2026-11-27 | P5A | OIDC auth, PII edges, spotlighting, injected-doc suite + eval-security CI, 16 tests, ADR 009, PR | Opus-class (session default) | ~1.2M in (mostly cached), ~35k out | ~$3-5 | |
+| 2026-11-27 | P5B | Taint ledger, plan/data separation (quarantined extract), step + trace tool-call policy, 70-case suite + 2 arms, 7 tests, ADR 010, PR | Opus-class (session default) | ~0.8M in (mostly cached), ~30k out | ~$2-4 | Haiku eval in CI, cap $1 |

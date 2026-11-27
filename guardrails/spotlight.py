@@ -11,8 +11,13 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass, field
+from typing import TYPE_CHECKING
 
 from guardrails.pii import PiiGuard
+from guardrails.policy import Policy
+
+if TYPE_CHECKING:
+    from agent.model import ChatModel
 
 OPEN, CLOSE = "<<untrusted_data>>", "<</untrusted_data>>"
 _MARKER = re.compile(r"<<\s*/?\s*untrusted_data\s*>>", re.IGNORECASE)
@@ -33,3 +38,8 @@ def spotlight(text: str) -> str:
 class Guardrails:
     pii: PiiGuard | None = None
     spotlight_tools: frozenset[str] = field(default_factory=frozenset)  # e.g. search, fetch_doc
+    # P5.3/P5.4 (ADR 010). untrusted_tools feed the taint ledger; policy checks every call;
+    # quarantine (a tool-less model) switches on plan/data separation.
+    untrusted_tools: frozenset[str] = frozenset({"search", "fetch_doc"})
+    policy: Policy | None = None
+    quarantine: ChatModel | None = None

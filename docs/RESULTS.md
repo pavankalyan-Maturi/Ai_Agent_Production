@@ -266,7 +266,27 @@ Command: `uv run python -m evals.security.run` (offline; ran here). Model arms: 
 | false blocks on 20 benign docs | 0% |
 
 - Latency: governed tool call p50 1.47 ms / p95 1.94 ms (n=300). PII redaction p50 0.04 ms/doc.
-- Attack success rate (Haiku 5.5, none / scanner / scanner+spotlight): NOT MEASURED here; read
-  the `eval-security` job summary.
-- What did not replicate: nothing yet. The heuristic scanner simply misses most families, which
-  is expected for regex rules and is the case for PR B's plan/data separation.
+- Attack success rate (Haiku 5.5, CI `eval-security` on PR #9, $0.01): none **38%**, scanner
+  **25%**, scanner+spotlight **18%**. Paraphrase (60%) and authority-style (40%) attacks still
+  leaked with spotlighting on.
+- What did not replicate: spotlighting by delimiting halves ASR, short of the near-zero the
+  paper reports for its strongest (encoding) variant. The heuristic scanner misses most families.
+
+## Phase 5B: plan/data separation + taint (CaMeL-lite), step + trace tool-call policy (ADR 010)
+Command: `uv run python -m evals.security.run` (offline + scripted; ran here). Suite now 70 cases:
+40 attacks, 20 benign, 10 benign_action (the user asks for a ticket) for false blocks.
+
+Scripted worst case (the model obeys every injection it can read; no spend):
+
+| arm | ASR | exfil ASR | answer ASR | benign acc | ticket asks done | false blocks (30) |
+|---|---|---|---|---|---|---|
+| none | 100% | 100% | 100% | 100% | 100% | 0% |
+| policy (step + trace) | 88% | 0% | 100% | 100% | 100% | 0% |
+| camel (plan/data + policy) | 0% | 0% | 0% | 100% | 100% | 0% |
+
+- Latency: policy check p50 0.014 ms / p95 0.025 ms per step (n=300). The quarantined reader adds
+  one model call per `extract` (Haiku cost and latency: CI).
+- Haiku 5.5 ASR, benign accuracy, ticket success and false blocks for all 5 arms: NOT MEASURED
+  here; read the `eval-security` job summary on the PR B run.
+- Limits: the policy alone does nothing for answer-text attacks; camel's 0% on answers depends on
+  typed validation and would not hold for the `text` type.

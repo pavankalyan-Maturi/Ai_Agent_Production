@@ -33,6 +33,10 @@ class AgentState(TypedDict, total=False):
     failure: str
     # Phase 5 guardrails: detector names that fired on the user turn or the answer (no values).
     redactions: Annotated[list[str], operator.add]
+    # P5.3/P5.4 (ADR 010): plan/data variables ($vN -> value, source, taint) and policy denials
+    # (call id, tool, rule; never argument values).
+    variables: dict[str, dict[str, Any]]
+    policy_events: Annotated[list[dict[str, str]], operator.add]
 
 
 @dataclass(frozen=True)
