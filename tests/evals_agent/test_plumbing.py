@@ -148,3 +148,16 @@ def test_nearest_other_skips_the_source() -> None:
     nb = R.nearest_other(seen, qs[0])
     assert nb is not None and nb[0].id == "b"
     assert R.nearest_other(seen[:1], qs[0]) is None
+
+
+def test_gate_fails_on_shipped_config_regression_only() -> None:
+    rows = [{"arm": "off", "f1": 0.50}, {"arm": "gated", "f1": 0.40}]
+    failures, notes = R.check_gate(rows, baseline_f1=0.501, tol=0.05)
+    assert failures == [] and len(notes) == 1
+    failures, _ = R.check_gate([{"arm": "off", "f1": 0.44}], baseline_f1=0.501, tol=0.05)
+    assert len(failures) == 1
+
+
+def test_gate_ignores_unmeasured_arms() -> None:
+    rows = [{"arm": "off", "not_measured": "no key"}, {"arm": "gated", "f1": 0.1}]
+    assert R.check_gate(rows, baseline_f1=0.501, tol=0.05) == ([], [])

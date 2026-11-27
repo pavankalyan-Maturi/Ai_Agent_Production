@@ -75,3 +75,7 @@ Ungated memory (the `on` arm) admits everything the distiller writes. It is the 
 - Production outcome signal: there is no feedback endpoint yet (Phase 5), so memory is written only by the eval.
 - Memory decay or eviction, and per-item win-rate tracking.
 - The replay cost of the gate grows with distilled items. It is bounded here by 2 items per run and the static checks.
+
+## Addendum 2026-11-27: what the gate checks
+
+Memory loses 0.10 F1 to no memory with a CI that excludes 0, reproduced from cache on 4 runs. A gate on a feature that is off by default only blocked unrelated merges, so eval-gate:agent now fails when the shipped config (memory off) drops more than 0.05 below its recorded F1 of 0.501, and the memory arms are report-only. Alternative rejected: `continue-on-error` on the job, which would also hide a regression of the default path. Re-enable gating on the memory arms when memory is switched on by default.
