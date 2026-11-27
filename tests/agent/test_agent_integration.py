@@ -145,3 +145,26 @@ def test_pg_memory_bank_is_tenant_scoped() -> None:
     hits = bank.search(a, v, 3)
     assert hits[0][0] == it and hits[0][1] > 0.99
     assert bank.search(b, v, 3) == []
+
+
+def test_create_ticket_is_idempotent_and_tenant_scoped(tmp_path: Path) -> None:
+    import psycopg
+
+    from agent.governance import Governance
+    from agent.tools import create_ticket_tool, migrate_tickets
+
+    assert DSN
+    migrate_tickets(DSN)
+    gov = Governance.from_yaml(audit_path=str(tmp_path / "audit.db"))
+    tool = create_ticket_tool(DSN)
+    t = f"tk-{uuid.uuid4().hex[:8]}"
+    args = {"title": "Disk full on db-1", "priority": "high"}
+    a = gov.execute(tool, tenant_id=t, role="operator", args=args, call_id="c1", approver="alice")
+    b = gov.execute(tool, tenant_id=t, role="operator", args=args, call_id="c1", approver="alice")
+    assert a == b and a.startswith("ticket T-")  # a re-run after a crash files nothing new
+    denied = gov.execute(tool, tenant_id=t, role="researcher", args=args, call_id="c2")
+    assert '"decision": "blocked_policy"' in denied
+    with psycopg.connect(DSN) as conn:
+        n = conn.execute("SELECT count(*) FROM agent_tickets WHERE tenant_id = %s", (t,)).fetchone()
+    assert n is not None and n[0] == 1
+    gov.close()

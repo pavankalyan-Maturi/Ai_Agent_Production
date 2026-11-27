@@ -37,6 +37,12 @@ class Settings(BaseSettings):
     ingest_max_bytes: int = 5_000_000
     ingest_max_retries: int = 5
 
+    # Tool governance (Phase 3, ADR 006): mcp-rbac-gateway policy and its SQLite audit trail.
+    sentinel_config: str = "sentinel.yaml"
+    sentinel_audit_db: str = ".sentinel/audit.db"
+    # Admin key for /api/v1/security/* until real auth (Phase 5). Unset = those routes are off.
+    admin_api_key: SecretStr | None = None
+
     # Placeholder for the LiteLLM virtual key (Phase 4). Never logged.
     llm_api_key: SecretStr | None = None
 

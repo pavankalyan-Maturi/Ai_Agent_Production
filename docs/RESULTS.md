@@ -143,3 +143,26 @@ Reading:
 Mean estimated context tokens per model call, real model (arm off, compaction on, run 2): 104, 865, 1345, 1650, 1686. Runs are short, so compaction rarely triggers here.
 
 Total Haiku spend for the ablation: $0.48 (run 1 $0.28 + run 2 $0.20).
+
+## Phase 3A: tool governance (mcp-rbac-gateway 0.2.0)
+
+`scripts/bench_governance.py -n 2000`, local sandbox (4 vCPU), SQLite audit on local disk. The tool is the calculator (4 µs), so these numbers are the gateway's own cost.
+
+| Path | p50 | p95 |
+|---|---|---|
+| Raw tool call | 3.9 µs | |
+| Governed, allowed (policy, scans, audit write) | 2.08 ms | 2.63 ms |
+| Governed, denied by policy (with audit write) | 1.81 ms | |
+| Output scan alone, 2 kB result | 0.94 ms | |
+
+Tests (`tests/security/test_governance.py`, real `sentinel.yaml`), all passing locally:
+- An allowed call runs. Its output PII is redacted, and it is audited per tenant with the tool-call id.
+- A researcher → `create_ticket` call is blocked without an approval pause, and the model is never offered the tool.
+- Argument regexes block `__import__`, `../` and priority values outside low/medium/high.
+- With no role, every tool is denied.
+- Secrets in arguments are redacted before the tool runs.
+- An injected tool output is blocked, and the model never sees it.
+- An operator `create_ticket` pauses, then runs on approval, with `alice` recorded as approver. A rejection is audited as `denied_by_human`.
+- A direct call waits on `/api/v1/security/approvals` and runs after approval.
+- The API returns 503 with no key, 401 with a wrong key, and only that tenant's audit rows.
+- Integration (Postgres): `create_ticket` is idempotent and tenant-scoped.

@@ -1,33 +1,32 @@
 # Handoff
 
 ## Done
-- Phases 0, 1 and Phase 2 PR A merged (PR #1-#4).
-- Phase 2 PR B (this PR, not merged):
-  - P2.4 context compaction plus a token chart.
-  - P2.5 experience memory (`agent_memory`, tenant-scoped) with an admission gate (static checks, then a replay with and without the item).
-  - P2.6 reflection triggered only by external checks (citations, tool errors).
-  - OTel GenAI spans with no content, pinned to semconv schema 1.44.0.
-  - HotpotQA off/on/gated ablation on Haiku 5.5 (`eval-agent` workflow, $2 cap, response cache, eval gate). ADR 005.
-- Fix to PR A: checkpoints are now written with `durability="sync"`. The default `async` lost the checkpoint in 8 of 30 kill trials (ADR 004 amended).
+- Phases 0-2 merged (PR #1-#5).
+- Phase 3 PR A (this PR, not merged): tool governance with the owner's `mcp-rbac-gateway` 0.2.0 (ADR 006).
+  - `sentinel.yaml`: roles `anonymous` (deny all), `researcher` (read-only), `operator` (+ `create_ticket`, always needs approval). It adds argument rules, secret/PII redaction and injection blocking.
+  - `agent/governance.py`: every tool call in the graph runs policy → input scan → approval → tool → output scan → audit. A blocked call becomes a structured `tool_denied` observation, never a crash.
+  - Approvals: the policy decides, and the LangGraph interrupt waits durably. The approver is recorded in the gateway's audit. Calls made outside the graph wait on the gateway broker.
+  - API: `/api/v1/security/approvals` (the gateway's router) and `/api/v1/security/audit` (tenant-scoped), both behind `PAP_ADMIN_API_KEY`.
+  - New action tool `create_ticket` (tenant-scoped, idempotent).
+
+## Spec deviations (owner request vs library 0.2.0)
+- The import is `mcp_rbac_gateway`, not `mcp_sentinel`.
+- `@guard` can't carry the tenant or call id, so we call the same pipeline steps directly.
+- There is no audit HTTP endpoint in the library, so we wrote one that reads the `events` table.
+- No auth existed, so an admin bearer key was added as a stopgap until Phase 5.
+- No external MCP connections exist yet, so the proxy comes in PR B.
 
 ## Verified here
-- Gate: ruff, format, mypy (apps, retrieval, evals, agent), 70 unit tests.
-- Integration against pgvector 0.8.6: kill/resume 30/30 with sync, HITL across savers, tenant-scoped tools and memory bank.
-- Eval plumbing end to end against real Postgres with a scripted model.
-
-## Verified in CI
-- All 7 checks green on 9a7ea83, including `eval-agent`: HotpotQA, 100 questions, Haiku 5.5. F1 was off 0.479, on 0.445, gated 0.444; both memory arms are within noise of off. Run 1 had shown memory significantly hurting, which led to the fixes in ADR 005.
-- Memory stays off by default. Haiku spend: $0.48.
+- Gate: ruff, format, mypy, full unit suite including 13 new governance tests.
+- Integration against local pgvector: the ticket tool is idempotent and tenant-scoped.
+- Bench: about 2.1 ms p50 per governed call.
 
 ## Not verified
-- Sonnet with thinking on, after compaction drops raw blocks.
-- Checkpointer behind PgBouncer.
-
-## Open
-- No feedback endpoint for production memory outcomes (Phase 5). No memory eviction. No checkpoint pruning.
+- The approval broker across several API replicas. It lives in memory; the graph pause is the multi-replica path.
+- The Docker image with sentinel.yaml (not built this thread).
 
 ## Next step
-Review and merge this PR. Phase 3 (MCP + A2A) on request.
+Review and merge PR A. Then PR B: our stateless MCP server (P3.1/P3.2) behind the gateway's `StatelessHttpProxy`, keeping `_meta`/`traceparent`. Then PR C: the A2A card (P3.4) and P3.3.
 
 ## Versions pinned
-docs/SPEC.md Pins table, ADR 002-005 (langgraph 1.2.24 family; opentelemetry-semantic-conventions 0.66b2 / schema 1.44.0).
+docs/SPEC.md Pins table, ADR 002-006 (`mcp-rbac-gateway>=0.2.0,<0.3`).

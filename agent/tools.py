@@ -111,3 +111,62 @@ def fetch_doc_tool(store: PgStore, max_chars: int = 4000) -> Tool:
         ),
         fn,
     )
+
+
+TICKETS = """
+CREATE TABLE IF NOT EXISTS agent_tickets (
+    tenant_id  text NOT NULL,
+    id         text NOT NULL,
+    title      text NOT NULL,
+    body       text NOT NULL DEFAULT '',
+    priority   text NOT NULL DEFAULT 'medium',
+    created_at timestamptz NOT NULL DEFAULT now(),
+    PRIMARY KEY (tenant_id, id)
+);
+"""
+
+
+def migrate_tickets(dsn: str) -> None:
+    import psycopg
+
+    with psycopg.connect(dsn, prepare_threshold=None) as conn, conn.transaction():
+        conn.execute("SELECT pg_advisory_xact_lock(hashtext('pap.migrate.agent_tickets'))")
+        conn.execute(TICKETS)
+
+
+def create_ticket_tool(dsn: str) -> Tool:
+    """A side-effecting action tool. Idempotent: the same ticket filed twice is one row,
+    because a crashed `act` step re-runs its calls on resume (ADR 004)."""
+    import hashlib
+
+    import psycopg
+
+    def fn(tenant: str, args: dict[str, Any]) -> str:
+        title, body = str(args["title"]), str(args.get("body", ""))
+        priority = str(args.get("priority", "medium"))
+        tid = hashlib.sha256(f"{tenant}\x00{title}\x00{body}".encode()).hexdigest()[:12]
+        with psycopg.connect(dsn, prepare_threshold=None) as conn:
+            conn.execute(
+                "INSERT INTO agent_tickets (tenant_id, id, title, body, priority) "
+                "VALUES (%s, %s, %s, %s, %s) ON CONFLICT DO NOTHING",
+                (tenant, tid, title, body, priority),
+            )
+        return f"ticket T-{tid} filed"
+
+    return Tool(
+        ToolSpec(
+            "create_ticket",
+            "File a support ticket for this tenant. Needs human approval.",
+            {
+                "type": "object",
+                "properties": {
+                    "title": {"type": "string"},
+                    "body": {"type": "string"},
+                    "priority": {"type": "string", "enum": ["low", "medium", "high"]},
+                },
+                "required": ["title"],
+            },
+        ),
+        fn,
+        requires_approval=True,
+    )
