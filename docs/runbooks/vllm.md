@@ -11,16 +11,17 @@ Decision record: ADR 013. Pins: `serving/vllm.env`.
 Stop the pod as soon as step 5 is done. A stopped pod with a volume still bills storage; terminate it.
 
 ## 1. Rent
-- RunPod, template "RunPod PyTorch" (any CUDA 12.x image with Docker) or a bare GPU VM with the
-  NVIDIA container toolkit. 1 GPU, 60 GB disk. Expose no public port; use SSH port forwarding.
-- On the box: `nvidia-smi` shows the GPU; `docker run --rm --gpus all nvidia/cuda:12.4.1-base-ubuntu22.04 nvidia-smi` works.
-  (If the template has no Docker, run `pip install vllm==0.34.0` and replace `docker run ... $VLLM_IMAGE` in
-  `serving/serve.sh` with `vllm serve` and the same args.)
+- RunPod pod, template "RunPod PyTorch" (CUDA 12.x), 1x L40S, 80 GB container disk, no network volume (nothing to pay for after terminate).
+  Expose no public HTTP port; connect with the pod's SSH command. RunPod pods are containers and
+  have **no Docker**, so `serving/serve.sh` runs `vllm serve` natively (auto-detected).
+- Or a bare GPU VM with Docker + the NVIDIA container toolkit; then `serve.sh` uses `$VLLM_IMAGE`.
+- On the box: `nvidia-smi` shows the GPU.
 
 ## 2. Setup
 ```bash
 git clone https://github.com/pavankalyan-Maturi/Ai_Agent_Production && cd Ai_Agent_Production
 pip install uv && uv sync --frozen
+pip install vllm==0.34.0          # only when there is no Docker (RunPod)
 export HF_TOKEN=...            # accept the Llama 3.1 licence on HF first
 export VLLM_API_KEY=$(openssl rand -hex 16)
 mkdir -p serving/results
@@ -28,15 +29,12 @@ mkdir -p serving/results
 
 ## 3. Run the four arms (one server at a time)
 ```bash
-for arm in baseline prefix eagle3 prefix+eagle3; do
-  serving/serve.sh "$arm" > "serving/results/$arm.log" 2>&1 &
-  until curl -fsS -H "Authorization: Bearer $VLLM_API_KEY" localhost:8000/v1/models >/dev/null; do sleep 5; done
-  uv run python -m serving.bench --arm "$arm" --concurrency 1 8 32 --requests 64 \
-    --out "serving/results/$arm.json"
-  docker rm -f pap-vllm; wait
-done
-nvidia-smi --query-gpu=name,memory.total,driver_version --format=csv > serving/results/gpu.csv
+tmux new -s bench         # so a dropped SSH connection does not kill the run
+serving/run_all.sh        # ~40-60 min; first arm downloads the weights
 ```
+It starts each arm, waits for `/v1/models`, runs `serving.bench` at concurrency 1/8/32 x 64
+requests, stops the server and writes `serving/results/<arm>.json`, `<arm>.log` and `gpu.csv`.
+An arm whose server dies or does not come up in 20 min is written as `{"did_not_run": true}`.
 If `eagle3` fails to start (flag or draft-head mismatch on 0.34), keep the log, skip that arm and
 record it as "did not run" in RESULTS. Do not swap the draft model silently.
 
