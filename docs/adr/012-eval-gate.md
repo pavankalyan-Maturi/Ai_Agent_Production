@@ -29,7 +29,7 @@ only trusts an LLM judge after it agrees with a human.
    responses cached. `judge_correct` may gate only when Cohen's kappa vs ≥100 human labels in
    `evals/labels/hotpot_correctness.csv` is ≥ 0.6. The F1 ≥ 0.5 rule is scored against the same
    labels, so the judge has to beat the lexical baseline to be worth its cost.
-6. **Cost cap**: new spend of agent run + judge ≤ $1 per run, enforced.
+6. **Cost cap**: new spend of agent run + judge ≤ $0.30 per run, enforced (agent $0.25, judge $0.05; the user's API balance is low).
 7. **Enforcement** per metric in `gate.toml`. Today: F1 and the cost cap enforced; judge,
    evidence recall, redundant calls and $/question report-only until sign-off.
 
@@ -52,3 +52,7 @@ only trusts an LLM judge after it agrees with a human.
 
 ## Pins
 No new dependency (`tomllib`, stdlib). Judge model claude-haiku-5-5 (as ADR 005).
+
+## Cut
+P6.5 GEPA vs MIPROv2 is cut (user decision 2026-11-27, SPEC cut list #2): credit is better
+spent on the gate, which the cut list says is never cut. NOT MEASURED, not attempted.

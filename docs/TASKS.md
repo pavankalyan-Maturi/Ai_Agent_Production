@@ -51,7 +51,7 @@ Acceptance: DLQ test, filtered-recall test, ablation row per config with CI link
 - P6.2 judge calibration (kappa) vs evals/labels/ — IN REVIEW (PR A; code done, kappa BLOCKED on human labels)
 - P6.3 MAST tagging + histogram — IN REVIEW (PR A; rule-based, 6 of 14 modes)
 - P6.4 eval-gate.yml with bootstrap CI and cost cap — IN REVIEW (PR A; thresholds await sign-off)
-- P6.5 GEPA vs MIPROv2 on synthesis module — TODO (cut list #2; asking)
+- P6.5 GEPA vs MIPROv2 on synthesis module — CUT (user decision 2026-11-27, SPEC cut list #2; ADR 012)
 
 ## Phase 7: vLLM (human-run)  [CHECKPOINT: before renting GPU]
 - P7.1 serving/ configs + bench scripts; P7.2 runbook (RunPod L40S/H100), cost estimate, teardown; P7.3 human runs, logs -> RESULTS.md

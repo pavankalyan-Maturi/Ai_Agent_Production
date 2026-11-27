@@ -13,20 +13,20 @@
     pool CSV export without scores.
   - **P6.3** rule-based MAST tags (FM-1.1, 1.3, 1.5, 3.1, 3.2, 3.3) + histogram.
   - **P6.4** `evals/gate.py` + `evals/gate.toml` + `eval-gate.yml`: paired bootstrap per
-    question, per-metric enforcement, $1 cost cap. eval-agent (memory ablation) is now manual.
+    question, per-metric enforcement, $0.30 cost cap. eval-agent (memory ablation) is now manual.
 
 ## Verified here
 - Gate: ruff, format, mypy, 165 unit tests (7 new in tests/evals_gate).
 - `python -m evals.gate` end to end on a synthetic trajectory file (no model).
 
 ## Not verified
-- Real numbers come from CI eval-gate (Haiku); see RESULTS.md Phase 6 once it has run.
+- CI eval-gate on PR #14: F1 0.501 reproduced from cache ($0.00), judge $0.003; RESULTS.md Phase 6A.
 - Judge kappa: BLOCKED on human labels. MAST rule tags not checked against human tags.
 
 ## Open
 - CHECKPOINT: user labels 100 items and signs off thresholds in `evals/gate.toml`; then commit
   `evals/baselines/agent_off.json` (from the run's `baseline_candidate.json`) and flip enforce.
-- P6.5 GEPA vs MIPROv2 (cut list #2): not started, awaiting a go/cut decision.
+- P6.5 GEPA vs MIPROv2: CUT by user decision (cut list #2), recorded in ADR 012.
 - Gate covers the agent eval only; retrieval/security keep their own workflow rules.
 - From before: agent graph does not use gateway cache/limiter; Keycloak compose profile.
 

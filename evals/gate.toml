@@ -7,7 +7,7 @@
 # the mean drop >= min_effect; "lower" metrics mirror it. relative = true scales by the baseline.
 
 [gate]
-cost_cap_usd = 1.0          # new model spend of agent run + judge (cache hits are free)
+cost_cap_usd = 0.30          # new model spend of agent run + judge (cache hits are free)
 enforce_cost_cap = true
 min_kappa = 0.6             # judge may gate only at or above this kappa vs human labels
 min_labels = 100            # ... measured on at least this many labelled items
