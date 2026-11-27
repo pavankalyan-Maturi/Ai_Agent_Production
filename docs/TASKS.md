@@ -19,12 +19,12 @@ Acceptance: CI green; compose-smoke boots obs and Langfuse /api/public/health re
 Acceptance: DLQ test, filtered-recall test, ablation row per config with CI link.
 
 ## Phase 2: Agent graph  [CHECKPOINT: memory ablation + budget policy review]
-- P2.1 LangGraph planner/executor; tools: search, fetch_doc, calculator — IN REVIEW (PR A)
-- P2.2 AsyncPostgresSaver; crash-resume test — IN REVIEW (PR A)
-- P2.3 budgets (steps, tokens, USD) + graceful degrade; HITL interrupt for flagged tools — IN REVIEW (PR A)
-- P2.4 context compaction (tool-result truncation, summarize-at-threshold); token chart
-- P2.5 experience memory (ReasoningBank-style) + admission gate (replay with/without)
-- P2.6 grounded reflection only on external failure signals
+- P2.1 LangGraph planner/executor; tools: search, fetch_doc, calculator — DONE (PR #4)
+- P2.2 AsyncPostgresSaver; crash-resume test — DONE (PR #4)
+- P2.3 budgets (steps, tokens, USD) + graceful degrade; HITL interrupt for flagged tools — DONE (PR #4)
+- P2.4 context compaction (tool-result truncation, summarize-at-threshold); token chart — IN REVIEW (PR B)
+- P2.5 experience memory (ReasoningBank-style) + admission gate (replay with/without) — IN REVIEW (PR B)
+- P2.6 grounded reflection only on external failure signals — IN REVIEW (PR B)
 
 ## Phase 3: MCP + A2A  [CHECKPOINT: protocol conformance review]
 - P3.1 MCPServer (stateless, Streamable HTTP), tools = retrieval/search; OAuth per spec, ADR

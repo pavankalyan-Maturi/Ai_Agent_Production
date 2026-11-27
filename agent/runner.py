@@ -4,10 +4,16 @@ from __future__ import annotations
 
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
-from typing import Any
+from typing import Any, Literal
 
 import psycopg
 from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
+
+# LangGraph's default durability is "async": the checkpoint for step N is written while step
+# N+1 runs, so a worker killed in that window loses it. Measured: 8 of 30 kill/resume trials
+# found nothing to resume with "async", 0 of 30 with "sync". Pass DURABILITY on every
+# invoke/stream of a checkpointed graph.
+DURABILITY: Literal["sync"] = "sync"
 
 
 @asynccontextmanager

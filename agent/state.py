@@ -19,6 +19,16 @@ class AgentState(TypedDict, total=False):
     status: Status
     stop_reason: str  # "final" | "max_steps" | "max_tokens" | "max_usd"
     answer: str
+    # P2.4 compaction: the transcript stays whole; these shape the model's view of it.
+    summary: str
+    compacted_upto: int
+    context_tokens: Annotated[list[int], operator.add]  # estimated view size per model call
+    # P2.5 experience memory recalled at start (ids, for attribution in the eval).
+    memory_ids: list[str]
+    # P2.6 grounded reflection: external check results, never model self-assessment.
+    reflections: int
+    verified: bool
+    failure: str
 
 
 @dataclass(frozen=True)

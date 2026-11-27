@@ -13,7 +13,7 @@ from typing import Any
 
 from agent.graph import build_graph
 from agent.model import ScriptedModel, ToolSpec
-from agent.runner import postgres_checkpointer
+from agent.runner import DURABILITY, postgres_checkpointer
 from agent.tools import Tool
 from tests.agent.scripted import plan_policy
 
@@ -44,7 +44,9 @@ def graph(saver: Any, log: str, hang_flag: str) -> Any:
 async def main(dsn: str, thread: str, log: str, hang_flag: str) -> None:
     async with postgres_checkpointer(dsn) as saver:
         await graph(saver, log, hang_flag).ainvoke(
-            {"tenant_id": "acme", "question": "q"}, {"configurable": {"thread_id": thread}}
+            {"tenant_id": "acme", "question": "q"},
+            {"configurable": {"thread_id": thread}},
+            durability=DURABILITY,
         )
 
 

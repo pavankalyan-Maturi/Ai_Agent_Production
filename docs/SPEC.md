@@ -33,7 +33,7 @@ docs/                SPEC, TASKS, handoff, RESULTS, COSTS, adr/, runbooks/
 | Python | 3.12 | installed |
 | FastAPI / Uvicorn / Pydantic / pydantic-settings | 0.165.x / 0.54.x / 2.13.x / 2.16.x | installed |
 | OpenTelemetry SDK + OTLP HTTP exporter | 1.45.x; instrumentation-fastapi 0.66b2 | installed |
-| OTel GenAI semconv | Development status; pin by commit when agent spans land (P2 PR B, ADR 004) | planned |
+| OTel GenAI semconv | schema 1.44.0 via opentelemetry-semantic-conventions==0.66b2 (Development status; ADR 005) | installed |
 | Postgres + pgvector | postgres 17 + pgvector 0.8.6 (`pgvector/pgvector:0.8.6-pg17`) | installed |
 | PgBouncer | 1.24.1 (transaction pooling, no prepared statements) | installed |
 | Redis | 7.4 | installed |

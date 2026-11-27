@@ -77,3 +77,36 @@ Tests (`tests/agent/`):
 - Tenant: the tenant comes from state even when the model supplies one; `search` and `fetch_doc` never return another tenant's document.
 
 A real model's planning quality: NOT MEASURED (no live LLM calls in this PR). Integration numbers in CI: see the PR's `integration` job.
+
+## Phase 2B: compaction, durability fix, memory ablation
+
+**Checkpoint durability (fix to Phase 2A).** `tests/agent` kill/resume, 30 trials each, local Postgres 17. With LangGraph's default `durability="async"`, 8 of 30 runs had no checkpoint to resume after SIGKILL. With `durability="sync"` (now always passed), 0 of 30 failed. The Phase 2A figure of 10/10 was measured with the default and was luck.
+
+`scripts/bench_agent.py -n 50 --kills 30`, after the fix:
+
+| Metric | Value |
+|---|---|
+| Run p50, InMemorySaver / AsyncPostgresSaver (sync) | 21.1 / 74.7 ms (p95 84.0) |
+| Checkpoint overhead per super-step, p50 | ≈2.4 ms (2.2 ms with async) |
+| SIGKILL inside a tool step, then resume | 30 / 30 correct |
+| Resume to completion, p50 / max | 19 / 53 ms |
+
+**Context compaction (P2.4).** `scripts/token_chart.py`: scripted model, 12 search results of ~6 kB each, `CompactionPolicy(tool_result_chars=3000, threshold_tokens=5000, keep_last=4)`. Token counts are estimates (4 chars per token).
+
+```mermaid
+xychart-beta
+    title "Estimated context tokens per model call (off: rising line, on: sawtooth)"
+    x-axis "model call" [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]
+    y-axis "tokens (est.)" 0 --> 18000
+    line [51, 1527, 3002, 4477, 5952, 7428, 8903, 10378, 11853, 13329, 14804, 16280, 17755]
+    line [51, 821, 1590, 2360, 3129, 3899, 4668, 1964, 2734, 3503, 4273, 2109, 2878]
+```
+
+| | Peak view | Sum over run |
+|---|---|---|
+| Compaction off | 17,755 | 115,739 |
+| Compaction on | 4,668 | 33,979 (−71%) |
+
+The answer was the same in both, and the transcript kept every message. Effect on answer quality with a real model: covered only indirectly by the ablation below (all arms run with compaction on); off vs on with a real model is NOT MEASURED.
+
+**Experience memory ablation (P2.5).** HotpotQA distractor validation, 100 questions, Claude Haiku 5.5: PENDING. The CI job `eval-agent` on this PR fills in this table.

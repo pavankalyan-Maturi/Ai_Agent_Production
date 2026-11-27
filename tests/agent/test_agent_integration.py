@@ -17,7 +17,7 @@ from langgraph.types import Command
 
 from agent.graph import build_graph
 from agent.model import ScriptedModel, ToolSpec
-from agent.runner import postgres_checkpointer, run_config
+from agent.runner import DURABILITY, postgres_checkpointer, run_config
 from agent.tools import Tool, fetch_doc_tool, search_tool
 from retrieval.embedding import HashEmbedder
 from retrieval.pipeline import index_documents
@@ -62,7 +62,7 @@ def test_worker_kill_mid_run_resumes_from_checkpoint(tmp_path: Path) -> None:
             cfg = {"configurable": {"thread_id": thread}}
             before = await g.aget_state(cfg)
             t0 = time.perf_counter()
-            out = await g.ainvoke(None, cfg)  # None = continue from the last checkpoint
+            out = await g.ainvoke(None, cfg, durability=DURABILITY)  # None = resume
             return before, out, time.perf_counter() - t0
 
     before, out, secs = asyncio.run(resume())
@@ -93,11 +93,15 @@ def test_hitl_survives_process_boundary() -> None:
 
     async def first() -> dict[str, Any]:
         async with postgres_checkpointer(DSN) as saver:
-            return await g(saver).ainvoke({"tenant_id": "acme", "question": "q"}, cfg)
+            return await g(saver).ainvoke(
+                {"tenant_id": "acme", "question": "q"}, cfg, durability=DURABILITY
+            )
 
     async def second() -> dict[str, Any]:
         async with postgres_checkpointer(DSN) as saver:
-            return await g(saver).ainvoke(Command(resume={"approved": True}), cfg)
+            return await g(saver).ainvoke(
+                Command(resume={"approved": True}), cfg, durability=DURABILITY
+            )
 
     assert "__interrupt__" in asyncio.run(first()) and seen == []
     out = asyncio.run(second())
@@ -121,3 +125,23 @@ def test_search_and_fetch_tools_are_tenant_scoped() -> None:
     finally:
         store.delete_tenant(a)
         store.delete_tenant(b)
+
+
+def test_pg_memory_bank_is_tenant_scoped() -> None:
+    import numpy as np
+
+    from agent.memory import MemoryItem, PgMemoryBank
+
+    assert DSN
+    emb = HashEmbedder(dim=384)
+    bank = PgMemoryBank(DSN, dim=384)
+    bank.migrate()
+    a, b = f"ma-{uuid.uuid4().hex[:8]}", f"mb-{uuid.uuid4().hex[:8]}"
+    it = MemoryItem("Bridge", "Search the bridge entity first, then its attribute.", "success")
+    v = np.asarray(emb.embed_query(it.content))
+    bank.add(a, it, v)
+    bank.add(a, it, v)  # same id: no duplicate row
+    assert bank.count(a) == 1 and bank.count(b) == 0
+    hits = bank.search(a, v, 3)
+    assert hits[0][0] == it and hits[0][1] > 0.99
+    assert bank.search(b, v, 3) == []
