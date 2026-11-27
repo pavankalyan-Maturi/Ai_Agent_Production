@@ -20,7 +20,7 @@
 ## Verified here
 - Gate: ruff, format, mypy (now including mcp_server), and the full unit suite including 23 MCP tests.
 - Integration against local pgvector: 6 passed, including real search through the gateway, tenant-scoped.
-- Bench: about 3.3 ms p50 added by the gateway, in-process.
+- Bench: about 3.4 ms p50 added by the gateway, in-process.
 
 ## Not verified
 - Two replicas on kind/Kubernetes. Only the in-process round-robin test ran.
@@ -36,4 +36,4 @@
 Review and merge PR B. Then PR C: A2A card (P3.4, JWS-signed) and P3.3 tool retrieval (RAG-MCP flag and tool-count eval).
 
 ## Versions pinned
-docs/SPEC.md Pins table, ADR 002-007 (`mcp[cli]==2.0.*` → 2.0.1, `mcp-rbac-gateway>=0.2.0,<0.3`).
+docs/SPEC.md Pins table, ADR 002-007 (`mcp[cli]==2.3.*` → 2.3.0, moved from 2.0.* for CVEs, `mcp-rbac-gateway>=0.2.0,<0.3`).

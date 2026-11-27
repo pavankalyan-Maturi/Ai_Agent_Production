@@ -173,8 +173,8 @@ Run with `scripts/bench_mcp.py -n 1000` in the local sandbox. Transports are in-
 
 | Path (SDK client, mode 2026-07-28, `tools/call`) | p50 | p95 |
 |---|---|---|
-| Direct to the MCP server | 2.77 ms | 3.27 ms |
-| Through mcp-rbac-gateway StatelessHttpProxy | 6.10 ms | 7.91 ms |
+| Direct to the MCP server | 2.63 ms | 3.70 ms |
+| Through mcp-rbac-gateway StatelessHttpProxy | 6.07 ms | 7.85 ms |
 
 Tests (`tests/mcp/`) all pass locally: 23 unit tests and 1 integration test against Postgres.
 

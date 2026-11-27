@@ -6,7 +6,7 @@ Status: accepted. Date: 2026-11-27.
 P3.1/P3.2 ask for an MCP server that speaks spec 2026-07-28 (stateless Streamable HTTP) and works with SDK v2 clients from both eras. It must scale across replicas with no session store and use OAuth as the spec requires. The owner also asked that external MCP traffic pass through their library's proxy (ADR 006), with `_meta` and `traceparent` preserved.
 
 ## Decision
-**Pin.** `mcp[cli]==2.0.*`, so 2.0.1 is installed, as SPEC already required. The SDK serves both 2026-07-28 (`server/discover`, per-request `_meta`) and the 2025-11-25 `initialize` handshake from the same endpoint.
+**Pin.** `mcp[cli]==2.3.*` (2.3.0). SPEC originally pinned `2.0.*`, but pip-audit in CI flagged five CVEs in 2.0.1 (CVE-2026-59951, -115563, -116684, -116685, -116686), fixed in 2.2.0. The pin moves to the latest minor, 2.3, and this ADR records the change. With 2.3, `AuthSettings.validate_token_resource=True` is set, so the SDK also checks the token's resource on top of our `aud` check. The SDK serves both 2026-07-28 (`server/discover`, per-request `_meta`) and the 2025-11-25 `initialize` handshake from the same endpoint.
 
 **Server (`mcp_server/server.py`).** `MCPServer("pap-retrieval")` exposes two tools, `search` and `fetch_doc`. They are the agent's own retrieval tools, annotated read-only and non-destructive.
 - Transport: `streamable_http_app(stateless_http=True, json_response=True)` with a Host allowlist (DNS-rebinding protection).
@@ -38,10 +38,10 @@ In-process, with no sockets and a tool that costs nothing (`scripts/bench_mcp.py
 
 | Path | p50 | p95 |
 |---|---|---|
-| Direct to the server | 2.77 ms | 3.27 ms |
-| Through the gateway | 6.10 ms | 7.91 ms |
+| Direct to the server | 2.63 ms | 3.70 ms |
+| Through the gateway | 6.07 ms | 7.85 ms |
 
-So the gateway adds about 3.3 ms at p50. That includes its own JSON-RPC parse, a second HTTP hop, scans and the audit write. Details are in RESULTS, Phase 3B.
+So the gateway adds about 3.4 ms at p50. That includes its own JSON-RPC parse, a second HTTP hop, scans and the audit write. Details are in RESULTS, Phase 3B.
 
 ## Limits and gaps (flagged)
 - **2-replica test.** It is in-process: two independently built apps behind a round-robin transport with no affinity. The client's discover, list and calls were spread across both, and every call succeeded. The kind/Kubernetes e2e from SPEC's acceptance list is NOT RUN here (no cluster in this sandbox).

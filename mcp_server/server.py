@@ -41,6 +41,7 @@ def build_server(
                 "issuer_url": issuer_url,
                 "resource_server_url": verifier.audience,
                 "required_scopes": [SCOPE],
+                "validate_token_resource": True,  # also enforced by JwtVerifier (aud)
             }
         ),
     )
