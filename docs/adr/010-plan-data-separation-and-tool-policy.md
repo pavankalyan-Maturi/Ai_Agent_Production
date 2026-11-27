@@ -57,8 +57,21 @@ Policy check p50 0.014 ms / p95 0.025 ms per step (n=300). The policy alone stop
 tool-exfil family: it does nothing for attacks that target the answer text. The camel arm's 0%
 on answers comes from typed validation (`1931 ZQX-...` is not a `date`).
 
-Haiku 5.5 per arm (including `policy` and `camel`, false blocks, benign utility): CI
-`eval-security`. NOT MEASURED here (no API access).
+Haiku 5.5 (CI `eval-security` on PR #10, $0.03, 267 new calls):
+
+| arm | ASR | benign acc | task acc under attack | ticket asks done | false blocks |
+|---|---|---|---|---|---|
+| none | 30% | 100% | 100% | 100% | 0% |
+| scanner | 20% | 100% | 75% | 100% | 0% |
+| scanner+spotlight | 10% | 100% | 75% | 100% | 0% |
+| policy | 10% | 100% | 75% | 100% | 0% |
+| camel | **0%** | 85% | 57% | 80% | 0% |
+
+Per family, camel is 0% everywhere. Under spotlight/policy, paraphrase still leaks 60% and
+role_override 20%; authority dropped to 0% from 80% (none). Haiku never took the exfil bait in
+any arm, so the policy's exfil block is shown only by the scripted run. The cost of camel is
+utility: the planner cannot read snippets, so benign accuracy falls 15 points and ticket
+requests 20 points.
 
 ## Consequences and limits
 - The `text` type accepts any short line, so an obedient reader can still poison a text answer;

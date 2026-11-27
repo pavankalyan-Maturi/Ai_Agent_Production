@@ -22,6 +22,8 @@
 ## Not verified
 - Docker images and compose-smoke (`pap-litellm:dev` build, healthcheck): CI compose-smoke.
 - Real providers through LiteLLM (no paid calls this thread); semantic cache with bge-small.
+- Nothing open from PR B: Haiku arms measured in CI (camel ASR 0%, benign acc 85%), recorded in
+  RESULTS.md and ADR 010.
 
 ## Open
 - Agent graph does not use cache/limiter yet (only the SSE route); TPM charged on an estimate.
