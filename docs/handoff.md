@@ -11,6 +11,8 @@
   - Keycloak compose profile `auth` (26.4.2, realm import `deploy/compose/keycloak/pap-realm.json`,
     client `pap-demo`, `tenant_id=demo`, `aud=pap-api`); api env points JWKS at it.
     `scripts/keycloak_smoke.sh` runs in compose-smoke CI. ADR 009 + SPEC pin updated.
+  - Bug found by that smoke (first authed `/v1/chat/stream` call in compose): fastembed weights
+    not downloadable -> 500. `build_deps` now falls back to exact-only on any embedder load error.
 
 ## Verified here
 - Gate: ruff, format, mypy, full pytest (7 new tests in tests/gateway/test_agent_model.py,
