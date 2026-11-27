@@ -1,7 +1,7 @@
 # eval-gate (P6.4). Metrics are per question on the shipped config (memory off), compared with
 # a paired bootstrap against evals/baselines/agent_off.json. A metric blocks a PR only when
-# enforce = true. Every metric except f1 and the cost cap stays report-only until the human
-# threshold sign-off at the Phase 6 checkpoint.
+# enforce = true. Signed off 2026-11-27: f1, judge_correct and the cost cap block; evidence
+# recall, redundant calls and $/question are report-only.
 #
 # Regression rule: "higher" metrics fail when the 95% CI upper bound of (PR - baseline) < 0 AND
 # the mean drop >= min_effect; "lower" metrics mirror it. relative = true scales by the baseline.
@@ -23,7 +23,7 @@ enforce = true
 direction = "higher"
 min_effect = 0.03
 requires_kappa = true
-enforce = false
+enforce = true              # signed off 2026-11-27 (kappa 0.827 vs 100 human labels)
 
 [metric.evidence_recall]
 direction = "higher"

@@ -19,3 +19,4 @@ Claude cannot read your balance. Paste actuals from Settings > Usage into the la
 | 2026-11-27 | P4 | LiteLLM 1.110.0 hardened image + config, Redis rate limits, tenant cache + false-hit set, SSE + disconnect, Locust run, 11 tests, ADR 011, PR | Opus-class (session default) | ~1.0M in (mostly cached), ~35k out | ~$2-4 | no paid model calls |
 | 2026-11-27 | P2 fix | PR #13: eval-agent gates the shipped config, memory arms report-only (row added later) | Opus-class (session default) | not recorded | ~$1-2 (ESTIMATE) | |
 | 2026-11-27 | P6A | Trajectory metrics, MAST tags, Haiku judge + kappa, paired-bootstrap eval-gate, 7 tests, ADR 012, PR | Opus-class (session default) | ~0.8M in (mostly cached), ~30k out | ~$2-3 | Haiku in CI: $0.003 measured (agent fully cached) |
+| 2026-11-27 | P6.2 | Labels xlsx -> CSV, kappa from CI, per-question baseline, 2 small PRs | Opus-class (session default) | ~0.4M in (mostly cached), ~10k out | ~$1 | Haiku $0.000 (cache) |
