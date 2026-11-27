@@ -26,7 +26,7 @@ from langgraph.checkpoint.memory import InMemorySaver
 
 from agent.graph import build_graph
 from agent.model import ScriptedModel
-from agent.runner import postgres_checkpointer
+from agent.runner import DURABILITY, postgres_checkpointer
 from agent.state import Budget
 from agent.tools import calculator
 from tests.agent import crash_worker
@@ -54,6 +54,7 @@ async def timed_runs(saver: Any, n: int) -> list[float]:
         s = await g.ainvoke(
             {"tenant_id": "bench", "question": "q"},
             {"configurable": {"thread_id": f"bench:{uuid.uuid4()}"}},
+            durability=DURABILITY,
         )
         out.append(time.perf_counter() - t0)
         assert s["answer"] == "18.0"
@@ -80,7 +81,9 @@ def kill_resume(dsn: str) -> float:
             async with postgres_checkpointer(dsn) as saver:
                 g = crash_worker.graph(saver, str(log), str(flag))
                 t0 = time.perf_counter()
-                s = await g.ainvoke(None, {"configurable": {"thread_id": thread}})
+                s = await g.ainvoke(
+                    None, {"configurable": {"thread_id": thread}}, durability=DURABILITY
+                )
                 assert s["answer"] == "done after work 3 ok", s
                 return time.perf_counter() - t0
 
