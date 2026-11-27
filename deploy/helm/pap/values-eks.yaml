@@ -1,0 +1,22 @@
+# Overrides for deploy/terraform/eks. ${...} placeholders are filled by scripts/burst_up.sh
+# (envsubst) into the Argo CD Application's helm.valuesObject, never committed with real values.
+image:
+  repository: ${ECR_REPOSITORY_URL}
+  tag: ${IMAGE_TAG}
+  pullPolicy: IfNotPresent
+ingress:
+  enabled: true
+  className: alb
+  annotations:
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/inbound-cidrs: ${ALLOWED_CIDR}
+    alb.ingress.kubernetes.io/healthcheck-path: /healthz
+postgres:
+  pgbackrest:
+    s3:
+      bucket: ${PGBACKREST_BUCKET}
+      region: ${AWS_REGION}
+      endpoint: s3.${AWS_REGION}.amazonaws.com
+    serviceAccountAnnotations:
+      eks.amazonaws.com/role-arn: ${PGBACKREST_ROLE_ARN}

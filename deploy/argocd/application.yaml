@@ -1,0 +1,21 @@
+# Rendered by scripts/burst_up.sh: envsubst fills ${...}; values-eks.yaml is appended,
+# rendered and indented, under valuesObject. Do not kubectl apply this file raw.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: pap
+  namespace: argocd
+spec:
+  project: default
+  syncPolicy:
+    automated: {prune: true, selfHeal: true}
+    syncOptions: [CreateNamespace=true, ServerSideApply=true]
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: pap
+  source:
+    repoURL: ${REPO_URL}
+    targetRevision: ${GIT_REVISION}
+    path: deploy/helm/pap
+    helm:
+      valuesObject:

@@ -1,0 +1,50 @@
+# Defaults render a self-contained stack (kind/k3s). values-eks.yaml switches on ALB + IRSA.
+image:
+  repository: pap-api
+  tag: dev
+  pullPolicy: IfNotPresent
+
+api:
+  replicas: 2
+  resources:
+    requests: {cpu: 250m, memory: 512Mi}
+    limits: {memory: 1Gi}
+  serviceAccount:
+    annotations: {}
+  # Plain env wins over existingSecret on duplicate keys, so keep auth settings out of here.
+  env:
+    PAP_ENV: burst
+    FASTEMBED_CACHE_PATH: /tmp/fastembed  # root filesystem is read-only
+    HF_HOME: /tmp/hf
+  # Created by scripts/burst_up.sh from Secrets Manager: PAP_LLM_API_KEY, PAP_OIDC_* (runbook step 2).
+  existingSecret: pap-app
+
+# KEDA owns the HPA. CPU is the only trigger: the burst runs API load only (ADR 014).
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 6
+  cpuUtilization: "60"
+
+mockLlm:
+  enabled: true  # no GPU and no paid LLM in the burst: the agent talks to the mock
+
+redis:
+  image: redis:7.4-alpine
+
+ingress:
+  enabled: false
+  className: alb
+  annotations: {}
+
+# Crunchy PGO PostgresCluster with pgvector, PgBouncer and a pgBackRest repo.
+postgres:
+  enabled: true
+  version: 17
+  storage: 10Gi
+  pgbackrest:
+    s3:
+      bucket: ""
+      region: us-east-1
+      endpoint: s3.us-east-1.amazonaws.com
+    serviceAccountAnnotations: {}

@@ -1,0 +1,56 @@
+{{- if .Values.postgres.enabled }}
+{{- $pg := .Values.postgres }}
+# Crunchy PGO v5: pgvector ships in the default crunchy-postgres image; pgBackRest repo1 on S3
+# with web-identity (IRSA) credentials. Restore drill: deploy/pgbackrest/restore_drill.sh.
+apiVersion: postgres-operator.crunchydata.com/v1beta1
+kind: PostgresCluster
+metadata:
+  name: pap-db
+  labels: {{- include "pap.labels" . | nindent 4 }}
+spec:
+  postgresVersion: {{ $pg.version }}
+  users:
+    - name: pap
+      databases: [pap]
+  databaseInitSQL:
+    name: pap-db-init
+    key: init.sql
+  instances:
+    - name: instance1
+      replicas: 1
+      dataVolumeClaimSpec:
+        accessModes: [ReadWriteOnce]
+        resources:
+          requests: {storage: {{ $pg.storage }}}
+  proxy:
+    pgBouncer:
+      replicas: 1
+      config:
+        global:
+          pool_mode: transaction
+  backups:
+    pgbackrest:
+      {{- with $pg.pgbackrest.serviceAccountAnnotations }}
+      metadata:
+        annotations: {{- toYaml . | nindent 10 }}
+      {{- end }}
+      global:
+        repo1-path: /pgbackrest/pap-db/repo1
+        repo1-retention-full: "2"
+        repo1-s3-key-type: web-id
+      repos:
+        - name: repo1
+          s3:
+            bucket: {{ $pg.pgbackrest.s3.bucket | quote }}
+            endpoint: {{ $pg.pgbackrest.s3.endpoint | quote }}
+            region: {{ $pg.pgbackrest.s3.region | quote }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: pap-db-init
+data:
+  init.sql: |
+    \c pap
+    CREATE EXTENSION IF NOT EXISTS vector;
+{{- end }}
