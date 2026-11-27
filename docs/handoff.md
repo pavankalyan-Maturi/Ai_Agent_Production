@@ -1,36 +1,36 @@
 # Handoff
 
 ## Done
-- Phases 0-6 merged (PR #1-#17).
-- Phase 4 follow-ups (this PR):
-  - `gateway/agent_model.py` `GatewayModel`: wraps any `ChatModel` so the agent graph's model
-    node goes through the gateway policy: rpm/tpm buckets (`SyncRateLimiter` in
-    `gateway/ratelimit.py`, same keys as `/v1/chat/stream`), bounded wait then `RateLimited`,
-    tenant-scoped exact cache of the full `Decision` (tool calls + provider blocks, hit = 0
-    tokens). ADR 011 limits section updated.
-  - Keycloak compose profile `auth` (26.4.2, realm import `deploy/compose/keycloak/pap-realm.json`,
-    client `pap-demo`, `tenant_id=demo`, `aud=pap-api`); api env points JWKS at it.
-    `scripts/keycloak_smoke.sh` runs in compose-smoke CI. ADR 009 + SPEC pin updated.
-  - Bug found by that smoke (first authed `/v1/chat/stream` call in compose): fastembed weights
-    not downloadable -> 500. `build_deps` now falls back to exact-only on any embedder load error.
+- Phases 0-6 and Phase 4 follow-ups merged (PR #1-#18).
+- Phase 7 P7.1 + P7.2 (this PR):
+  - `serving/vllm.env` + `serving/serve.sh`: vLLM 0.34.0 docker launch, 4 arms
+    (baseline / prefix / eagle3 / prefix+eagle3), Llama-3.1-8B-Instruct served as `local-llm`.
+  - `serving/bench.py`: streaming TTFT p50/p95, TPOT p50, output tok/s at concurrency 1/8/32,
+    shared ~1.8k-token system prompt; JSON out. Works direct or through LiteLLM.
+  - `gateway/litellm.yaml`: `local-vllm` -> `hosted_vllm/local-llm`, env base/key, fallback to
+    `agent-fast`. Compose defaults `VLLM_API_BASE` to the mock; compose smoke calls `local-vllm`.
+  - `docs/runbooks/vllm.md` (rent, run, collect, teardown, cost estimate), ADR 013.
+  - `serving` added to mypy in the gate (CLAUDE.md, ci.yml) and to wheel packages.
 
 ## Verified here
-- Gate: ruff, format, mypy, full pytest (7 new tests in tests/gateway/test_agent_model.py,
-  real Redis), incl. a two-run agent graph where run 2 makes zero model calls.
-- `docker compose config` with `--profile auth`.
+- Gate green: ruff, format, mypy (incl. serving), pytest 178 passed (5 new in tests/serving:
+  bench against the mock, error counting, TPOT math, LiteLLM entry, SPEC pin).
+- `docker compose --profile core config`, `bash -n serving/serve.sh`.
 
 ## Not verified
-- Keycloak image pull and realm import: quay.io is blocked in this sandbox; only the
-  compose-smoke CI step (`scripts/keycloak_smoke.sh`) exercises it.
+- Anything on a GPU: vLLM 0.34 flags, EAGLE-3 draft head compatibility, all numbers. NOT MEASURED.
+- LiteLLM `hosted_vllm` route: only the compose-smoke CI step exercises it (litellm not installed
+  in the dev env).
+- RunPod prices in the runbook are estimates.
 
 ## Open
-- Evals still construct `AnthropicModel` directly; wrapping them in `GatewayModel` would change
-  eval-gate spend accounting, so it is opt-in and not done.
-- Approvals API approver from body + untenanted pending approvals (ADR 009, library <0.3).
-- Gate covers the agent eval only; retrieval/security keep their own workflow rules.
+- P7.3 (human): follow docs/runbooks/vllm.md, commit serving/results, fill RESULTS.md table.
+- Carried over: evals use AnthropicModel directly (opt-in GatewayModel); approvals API approver
+  from body + untenanted pending approvals (ADR 009, library <0.3); gate covers agent eval only.
 
 ## Next step
-Phase 7 (vLLM runbook, human-run GPU) in a fresh thread.
+User runs P7.3 on a rented GPU. Phase 8 only when the user says so.
 
 ## Versions pinned
-Keycloak 26.4.2 (new row in docs/SPEC.md). Otherwise unchanged: SPEC Pins table, ADR 002-012.
+vLLM 0.34.0 image `vllm/vllm-openai:v0.34.0`, model Llama-3.1-8B-Instruct, draft
+`yuhuili/EAGLE3-LLaMA3.1-Instruct-8B` (ADR 013, SPEC row). Others unchanged.

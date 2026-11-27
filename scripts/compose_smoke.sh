@@ -38,13 +38,15 @@ from gateway.client import GatewayModel, StreamClient
 url, key = os.environ["PAP_LLM_GATEWAY_URL"], os.environ["PAP_LLM_API_KEY"]
 d = GatewayModel(url, key, name="mock-flaky").decide([{"role": "user", "content": "smoke"}], [])
 assert d.text.startswith("mock answer"), d
+v = GatewayModel(url, key, name="local-vllm").decide([{"role": "user", "content": "smoke"}], [])
+assert v.text.startswith("mock answer"), v  # hosted_vllm route -> mock in compose
 async def s():
     async with httpx.AsyncClient(base_url=url) as h:
         return [x async for x in StreamClient(h, key).stream("mock", [{"role": "user", "content": "a b"}])]
 assert len(asyncio.run(s())) >= 2
 r = httpx.post(f"{url}/key/generate", headers={"Authorization": f"Bearer {key}"}, json={})
 assert r.status_code == 403, r.status_code
-print("LITELLM_FALLBACK_OK=1 ADMIN_ROUTE_BLOCKED=1")
+print("LITELLM_FALLBACK_OK=1 VLLM_ROUTE_OK=1 ADMIN_ROUTE_BLOCKED=1")
 PY
 
 if [ "$LLMOBS" = 1 ]; then
