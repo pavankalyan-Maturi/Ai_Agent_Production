@@ -19,8 +19,8 @@
   0/30 false blocks; policy check p50 0.014 ms.
 
 ## Not verified
-- Haiku 5.5 on the `policy` and `camel` arms (ASR, benign accuracy, false blocks): CI
-  `eval-security` job summary, cap $1 (expected ~$0.1-0.2).
+- Nothing open from PR B: Haiku arms measured in CI (camel ASR 0%, benign acc 85%), recorded in
+  RESULTS.md and ADR 010.
 
 ## Open
 - Move sink definitions into sentinel.yaml when the library has a place for them.
@@ -28,7 +28,7 @@
 - Phase 4 gateway. HotpotQA memory gate red on main (separate task).
 
 ## Next step
-Review PR B and the eval-security numbers. Then Phase 4 or the memory-gate fix, in a fresh thread.
+Phase 4 (gateway) in a fresh thread (user's choice). Memory-gate fix after.
 
 ## Versions pinned
 docs/SPEC.md Pins table, ADR 002-010 (no new dependencies in PR B).
