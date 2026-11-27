@@ -14,6 +14,8 @@ api:
   # Plain env wins over existingSecret on duplicate keys, so keep auth settings out of here.
   env:
     PAP_ENV: burst
+    FASTEMBED_CACHE_PATH: /tmp/fastembed  # root filesystem is read-only
+    HF_HOME: /tmp/hf
   # Created by scripts/burst_up.sh from Secrets Manager: PAP_LLM_API_KEY, PAP_OIDC_* (runbook step 2).
   existingSecret: pap-app
 
