@@ -18,9 +18,9 @@ All three are optional `build_graph` arguments and are off unless passed. ADR 00
 
 ReasoningBank-style (Ouyang et al. 2025):
 
-- After a run, the distiller is given the trajectory and an external outcome (in the eval, answer F1 ≥ 0.8 against gold). It writes 1-2 items: a strategy on success, a pitfall on failure.
+- After a run, the distiller is given the trajectory and an external outcome. In the eval, F1 ≥ 0.8 against gold is a success and F1 ≤ 0.2 is a failure. Runs in between are not distilled, because their label is mostly about answer phrasing (run 1). It writes 1-2 items: a strategy on success, a pitfall on failure.
 - Items are per tenant, in `agent_memory` (Postgres + pgvector, exact scan filtered by tenant; `PgMemoryBank`). An in-memory bank with the same semantics serves tests and the eval.
-- Recall: the top 3 items by cosine similarity to the question (≥ 0.3) are added to the system prompt as "Lessons from earlier tasks (may not apply)".
+- Recall: the top 2 items with cosine similarity ≥ 0.6 to the question are added to the system prompt as "Lessons from earlier tasks (may not apply)". Run 1 used top 3 at ≥ 0.3, which with bge-small injected lessons into nearly every question. 0.6 is not yet calibrated.
 
 The admission gate checks cheap things first, so replays are only paid for items that could pass:
 
@@ -28,7 +28,7 @@ The admission gate checks cheap things first, so replays are only paid for items
 2. The item does not contain the source task's answer (a leak, not a lesson).
 3. The item contains no secret-like `key=`/`password:` patterns.
 4. It is not a near-duplicate (cosine ≥ 0.92) of an admitted item. This is checked again under a lock right before the insert, because replays run in parallel.
-5. **Replay with/without:** the source task is re-run with only this item recalled. The item is admitted if the score goes up, or if an already solved task stays solved with no extra steps. A neutral item on a failed task is noise and is rejected.
+5. **Replay with/without (transfer test):** the most similar *other* question seen so far is re-run with only this item recalled, and compared with that question's own run without it. The item is admitted if the score goes up, or if an already solved question stays solved with no extra steps. A neutral item on a failed question is noise and is rejected. Run 1 replayed the source question instead. That admitted 54 items, and gated memory still lost 0.06 F1 to no memory, because a lesson that fits its own question need not transfer.
 
 Ungated memory (the `on` arm) admits everything the distiller writes. It is the control that shows whether the gate earns its replay cost.
 

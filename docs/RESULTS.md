@@ -109,4 +109,19 @@ xychart-beta
 
 The answer was the same in both, and the transcript kept every message. Effect on answer quality with a real model: covered only indirectly by the ablation below (all arms run with compaction on); off vs on with a real model is NOT MEASURED.
 
-**Experience memory ablation (P2.5).** HotpotQA distractor validation, 100 questions, Claude Haiku 5.5: PENDING. The CI job `eval-agent` on this PR fills in this table.
+**Experience memory ablation (P2.5).** HotpotQA distractor validation, first 100 questions, 991 paragraphs, Claude Haiku 5.5, `eval-agent` workflow.
+
+Run 1 ([job](https://github.com/pavankalyan-Maturi/Ai_Agent_Production/actions/runs/45915156307/job/140232480323), commit 6da6a94, $0.28, 1260 calls). Setup: recall top 3 at cosine ≥ 0.3; every run distilled (success if F1 ≥ 0.8, else failure); the gate replayed the *source* question.
+
+| Arm | EM | F1 | F1 (2nd half) | ΔF1 vs off [95% CI] | Steps | Tokens/q | Memory | Gate |
+|---|---|---|---|---|---|---|---|---|
+| off | 0.300 | 0.483 | 0.532 | - | 2.52 | 4071 | 0 | - |
+| on | 0.230 | 0.392 | 0.417 | −0.091 [−0.160, −0.023] | 2.58 | 5443 | 130 | - |
+| gated | 0.260 | 0.421 | 0.457 | −0.062 [−0.132, +0.010] | 2.68 | 5689 | 54 | admitted 54, replay_worse 75, answer_leak 4, duplicate 1 |
+
+Reading: ungated memory made answers significantly worse. The gate removed about 60% of the items and recovered a third of the loss, but gated is still below off, so eval-gate:agent failed (as designed). Likely causes (UNVERIFIED):
+- A floor of 0.3 is below the typical cosine between unrelated questions with bge-small, so 3 lessons were injected into every question.
+- About half the runs had partial F1 (0.2-0.8), mostly answer phrasing, and were distilled as "failures", producing wrong pitfalls.
+- Replaying the source question admits items that only fit that question.
+
+Run 2 (this PR, after the changes in ADR 005): recall top 2 at ≥ 0.6, distil only clear outcomes (F1 ≥ 0.8 or ≤ 0.2), gate replays the nearest *other* question (a transfer test). Numbers: see the PR's `eval-agent` run.

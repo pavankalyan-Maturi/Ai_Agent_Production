@@ -74,18 +74,21 @@ def fake_runner(scores: dict[str, float]) -> Any:
     def run(q: Question, recall: Any) -> tuple[R.Outcome, list[dict[str, Any]]]:
         items = recall(R.TENANT, q.question) if recall else []
         boost = any("helpful" in i.content for i in items)
-        f = min(1.0, scores[q.id] + (0.5 if boost else 0.0))
+        f = min(1.0, scores[q.id] + (1.0 if boost else 0.0))
         return R.Outcome(q.id, float(f == 1.0), f, 3, 100, 0.0, "done", 0, len(items), [10], ""), []
 
     return run
 
 
-def test_arms_stream_memory_and_gate_filters(tmp_path: Path) -> None:
+def test_arms_stream_memory_and_gate_filters(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(R, "RECALL_MIN_SIM", -1.0)
     qs = [
         Question(str(i), f"question number {i} about a topic", "ans", "bridge", ())
         for i in range(6)
     ]
-    scores = {q.id: 0.5 for q in qs}
+    scores = {q.id: 0.0 for q in qs}  # clear failures: distilled as pitfalls
     emb = HashEmbedder(dim=64)
 
     def distill(question: str, _m: Any, outcome: str) -> tuple[list[MemoryItem], int, int]:
@@ -102,7 +105,7 @@ def test_arms_stream_memory_and_gate_filters(tmp_path: Path) -> None:
     on = R.arm("on", qs, run, distill, emb, batch=2, workers=2)
     gated = R.arm("gated", qs, run, distill, emb, batch=2, workers=2)
     assert off["memory"] == 0 and on["memory"] == 12
-    assert gated["gate"]["replay_worse"] >= 1 and 0 < gated["memory"] < 12
+    assert gated["gate"]["replay_worse"] >= 1 and 0 < gated["memory"] < 12  # "bad" items rejected
     f_off = [o.f1 for o in off["outcomes"]]
     f_gated = [o.f1 for o in gated["outcomes"]]
     assert f_off[:2] == f_gated[:2]  # the first batch has no memory yet
@@ -119,3 +122,29 @@ def test_no_key_reports_not_measured(tmp_path: Path, monkeypatch: pytest.MonkeyP
     monkeypatch.setattr("sys.argv", ["x", "--dsn", "postgresql://unused", "--out", str(tmp_path)])
     R.main()
     assert (tmp_path / "ablation.md").read_text().count("NOT MEASURED") == 3
+
+
+def test_ambiguous_grades_are_not_distilled() -> None:
+    qs = [Question(str(i), f"q {i}", "a", "bridge", ()) for i in range(4)]
+    calls: list[str] = []
+
+    def distill(question: str, _m: Any, _o: str) -> tuple[list[MemoryItem], int, int]:
+        calls.append(question)
+        return [], 0, 0
+
+    R.arm("on", qs, fake_runner({q.id: 0.5 for q in qs}), distill, HashEmbedder(dim=64), 2, 2)
+    assert calls == []
+
+
+def test_nearest_other_skips_the_source() -> None:
+    emb = HashEmbedder(dim=64)
+    qs = [
+        Question("a", "capital of france city", "x", "", ()),
+        Question("b", "capital of france town", "x", "", ()),
+        Question("c", "boiling point of water", "x", "", ()),
+    ]
+    o = R.Outcome("", 0, 0, 0, 0, 0, "done", 0, 0, [], "")
+    seen = [(q, o, R.unit(emb.embed_query(q.question))) for q in qs]
+    nb = R.nearest_other(seen, qs[0])
+    assert nb is not None and nb[0].id == "b"
+    assert R.nearest_other(seen[:1], qs[0]) is None

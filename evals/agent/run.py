@@ -26,6 +26,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+import numpy as np
+
 from agent.compaction import CompactionPolicy
 from agent.graph import build_graph
 from agent.memory import (
@@ -50,7 +52,9 @@ from retrieval.types import Document
 MODEL = "claude-haiku-5-5"
 HAIKU_EXTRA = {"thinking": {"type": "disabled"}, "output_config": {"effort": "low"}}
 TENANT = "eval-hotpot"
-SUCCESS_F1 = 0.8
+SUCCESS_F1 = 0.8  # distil a strategy at or above this F1
+FAILURE_F1 = 0.2  # distil a pitfall at or below; in between the label is too noisy (run 1, ADR 005)
+RECALL_K, RECALL_MIN_SIM = 2, 0.6
 INSTRUCTION = (
     "\n\nReply with only the short answer phrase (a name, date, number or yes/no), "
     "followed by the [doc_id]s it comes from."
@@ -208,8 +212,9 @@ def arm(
 ) -> dict[str, Any]:
     bank = InMemoryBank()
     gate = AdmissionGate(bank, emb) if name == "gated" else None
-    recall = Recall(bank, emb, k=3, min_sim=0.3) if name != "off" else None
+    recall = Recall(bank, emb, k=RECALL_K, min_sim=RECALL_MIN_SIM) if name != "off" else None
     outs: list[Outcome] = []
+    seen: list[tuple[Question, Outcome, np.ndarray]] = []
     pool = ThreadPoolExecutor(workers)
     for b in range(0, len(qs), batch):
         chunk = qs[b : b + batch]
@@ -217,21 +222,36 @@ def arm(
         outs += [r[0] for r in results]
         if name == "off":
             continue
+        seen += [
+            (q, r[0], unit(emb.embed_query(q.question)))
+            for q, r in zip(chunk, results, strict=True)
+        ]
 
-        def learn(qr: tuple[Question, tuple[Outcome, list[Message]]]) -> None:
+        def learn(
+            qr: tuple[Question, tuple[Outcome, list[Message]]],
+            seen: list[tuple[Question, Outcome, np.ndarray]] = seen,
+        ) -> None:
             q, (o, msgs) = qr
+            if FAILURE_F1 < o.f1 < SUCCESS_F1:
+                return
             label = "success" if o.f1 >= SUCCESS_F1 else "failure"
             items, _, _ = distill(q.question, msgs, label)
             for it in items:
                 if gate is None:
                     admit_ungated(bank, emb, TENANT, it)
-                else:
+                    continue
+                # Transfer test: replay the most similar *other* question seen so far with only
+                # this item recalled, against that question's own run without it. Replaying the
+                # source task (run 1) admitted items that only fit their own question.
+                nb = nearest_other(seen, q)
+                if nb is None:
+                    continue
 
-                    def replay(item: MemoryItem, q: Question = q) -> RunResult:
-                        r, _ = run(q, lambda _t, _q: [item])
-                        return RunResult(r.f1, r.steps)
+                def replay(item: MemoryItem, nq: Question = nb[0]) -> RunResult:
+                    r, _ = run(nq, lambda _t, _q: [item])
+                    return RunResult(r.f1, r.steps)
 
-                    gate.admit(TENANT, it, q.answer, RunResult(o.f1, o.steps), replay)
+                gate.admit(TENANT, it, q.answer, RunResult(nb[1].f1, nb[1].steps), replay)
 
         list(pool.map(learn, zip(chunk, results, strict=True)))
         print(f"[{name}] {len(outs)}/{len(qs)} memory={bank.count(TENANT)}", flush=True)
@@ -241,6 +261,22 @@ def arm(
         "memory": bank.count(TENANT),
         "gate": dict(gate.stats) if gate else {},
     }
+
+
+def unit(v: Any) -> np.ndarray:
+    a = np.asarray(v, dtype=np.float32)
+    return a / (np.linalg.norm(a) or 1.0)
+
+
+def nearest_other(
+    seen: list[tuple[Question, Outcome, np.ndarray]], q: Question
+) -> tuple[Question, Outcome] | None:
+    src = next((v for sq, _, v in seen if sq.id == q.id), None)
+    others = [(sq, so, v) for sq, so, v in seen if sq.id != q.id]
+    if src is None or not others:
+        return None
+    sq, so, _ = max(others, key=lambda t: float(t[2] @ src))
+    return sq, so
 
 
 def paired_ci(
