@@ -42,6 +42,7 @@ from agent.reflection import Verifier, reflection_prompt
 from agent.state import AgentState, Budget
 from agent.telemetry import TENANT, ga, provider_for
 from agent.telemetry import tracer as default_tracer
+from agent.tool_retrieval import ToolSelector
 from agent.tools import Tool
 
 Recaller = Callable[[str, str], list[MemoryItem]]  # (tenant_id, question) -> items
@@ -65,6 +66,7 @@ def build_graph(
     max_reflections: int = 1,
     tracer: Tracer | None = None,
     governance: Governance | None = None,
+    tool_selector: ToolSelector | None = None,
 ) -> Any:
     tr = tracer or default_tracer()
     provider = provider_for(model.name)
@@ -84,10 +86,21 @@ def build_graph(
         )
 
     def offered(state: AgentState) -> list[Any]:
-        """Tool specs the model sees: with governance, only the role's allowlist."""
-        if governance is None:
-            return specs
-        return [t.spec for t in governance.visible(state.get("role"), list(tools))]
+        """Tool specs the model sees: the role's allowlist, then (flag) the top-k for the task."""
+        visible = (
+            specs
+            if governance is None
+            else [t.spec for t in governance.visible(state.get("role"), list(tools))]
+        )
+        if tool_selector is None:
+            return visible
+        used = [
+            c["name"]
+            for m in state.get("messages", [])
+            if m.get("role") == "assistant"
+            for c in m.get("tool_calls") or []
+        ]
+        return tool_selector.select(state.get("question", ""), visible, used)
 
     def start(state: AgentState) -> AgentState:
         if state.get("messages"):

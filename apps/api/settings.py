@@ -43,6 +43,14 @@ class Settings(BaseSettings):
     # Admin key for /api/v1/security/* until real auth (Phase 5). Unset = those routes are off.
     admin_api_key: SecretStr | None = None
 
+    # P3.3 tool retrieval (RAG-MCP): offer the model only the top-k tools for the task.
+    tool_retrieval_ragmcp: bool = False
+    tool_retrieval_k: int = 5
+
+    # A2A (Phase 3, ADR 008): card signing key (EC P-256 PEM) and public base URL.
+    a2a_signing_key: SecretStr | None = None
+    a2a_base_url: str = "http://localhost:8000"
+
     # MCP server (Phase 3, ADR 007). OAuth resource server: verifies JWTs it never issues.
     mcp_jwt_key: SecretStr | None = None  # HS256 secret or RS256/ES256 public key (PEM)
     mcp_jwt_algorithms: list[str] = ["HS256"]

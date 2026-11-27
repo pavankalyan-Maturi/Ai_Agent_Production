@@ -1,0 +1,39 @@
+name: eval-tools
+# P3.3 tool-count scaling (RAG-MCP tool retrieval). Local embeddings only: no API spend.
+on:
+  workflow_dispatch:
+  pull_request:
+    paths: ["agent/tool_retrieval.py", "evals/tools/**", ".github/workflows/eval-tools.yml"]
+permissions: {contents: read}
+concurrency:
+  group: eval-tools-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  tools:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      FASTEMBED_CACHE_PATH: .cache/fastembed
+    steps:
+      - uses: actions/checkout@v5
+      - uses: astral-sh/setup-uv@v7
+        with: {version: "0.11.32", enable-cache: true}
+      - run: uv sync --frozen --python 3.12 --all-groups
+      - name: Cache models
+        uses: actions/cache@v4
+        with:
+          path: .cache/fastembed
+          key: tools-fastembed-v1
+      - name: Run tool-count scaling (hash + fastembed, k=5 and k=10)
+        run: |
+          mkdir -p results/tools
+          for emb in hash fastembed; do
+            for k in 5 10; do
+              uv run python -m evals.tools.run --embedder $emb --k $k \
+                --out results/tools/$emb-k$k.json | tee -a "$GITHUB_STEP_SUMMARY"
+              echo >> "$GITHUB_STEP_SUMMARY"
+            done
+          done
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with: {name: tool-scaling, path: results/tools}
