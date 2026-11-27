@@ -115,6 +115,11 @@ services:
     profiles: [core, full]
     command: ["uvicorn", "gateway.mock_llm:app", "--host", "0.0.0.0", "--port", "8010"]
     environment: {MOCK_LATENCY_S: "${MOCK_LATENCY_S:-0.05}"}
+    healthcheck:  # override the api image's :8000/healthz check
+      test: ["CMD", "python", "-c", "import urllib.request as u; u.urlopen('http://127.0.0.1:8010/health')"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
 
   litellm:
     build: {context: ../.., dockerfile: deploy/litellm/Dockerfile}

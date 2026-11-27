@@ -47,6 +47,12 @@ async def health() -> dict[str, Any]:
     return {"ok": True, **app.state.stats}
 
 
+@app.get("/v1/models")
+async def models() -> dict[str, Any]:
+    ids = ("mock", "mock-flaky", "mock-slow")
+    return {"object": "list", "data": [{"id": i, "object": "model"} for i in ids]}
+
+
 @app.post("/v1/chat/completions", response_model=None)
 async def chat(body: ChatBody) -> dict[str, Any] | StreamingResponse:
     app.state.stats["requests"] += 1
