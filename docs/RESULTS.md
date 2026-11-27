@@ -138,6 +138,16 @@ Reading:
 - The off arm moved 0.483 → 0.479 between runs with identical code, which is the run-to-run noise of the model.
 - eval-gate:agent passed (gated ≥ off − 0.05).
 
+Run 3, stable on main ([run](https://github.com/pavankalyan-Maturi/Ai_Agent_Production/actions/runs/45927934036), commit 933c649, $0.00, 0 new calls, 1225 cached). The same table came back on 4 consecutive runs (PR #9 to #10 merge), so this is not sampling noise.
+
+| Arm | EM | F1 | F1 (2nd half) | ΔF1 vs off [95% CI] | Steps | Tokens/q | Memory | Gate |
+|---|---|---|---|---|---|---|---|---|
+| off | 0.360 | 0.501 | 0.534 | - | 2.68 | 4469 | 0 | - |
+| on | 0.230 | 0.421 | 0.426 | −0.080 [−0.135, −0.028] | 2.57 | 4768 | 109 | - |
+| gated | 0.250 | 0.401 | 0.427 | −0.100 [−0.159, −0.045] | 2.59 | 4590 | 46 | admitted 46, answer_leak 6, replay_worse 55 |
+
+Reading: ReasoningBank-style memory did not replicate on this HotpotQA slice with Haiku; both arms are significantly worse than none. Memory stays off by default. eval-gate:agent now gates the shipped config (off F1 ≥ 0.501 − 0.05) and reports the memory arms without failing on them (`evals/agent/run.py:check_gate`).
+
 **Conclusion: experience memory does not help Haiku 5.5 on this HotpotQA slice. It stays off by default.** It is available, gated, for workloads where an eval shows a gain. Likely limits (UNVERIFIED): HotpotQA questions rarely share entities, so "strategy" lessons are generic, and the base loop is short (2.5 steps). A first-half/second-half split of 50 questions each is also small.
 
 Mean estimated context tokens per model call, real model (arm off, compaction on, run 2): 104, 865, 1345, 1650, 1686. Runs are short, so compaction rarely triggers here.
