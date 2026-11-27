@@ -44,6 +44,7 @@ from agent.telemetry import TENANT, ga, provider_for
 from agent.telemetry import tracer as default_tracer
 from agent.tool_retrieval import ToolSelector
 from agent.tools import Tool
+from guardrails import RULE, Guardrails, spotlight
 
 Recaller = Callable[[str, str], list[MemoryItem]]  # (tenant_id, question) -> items
 
@@ -67,6 +68,7 @@ def build_graph(
     tracer: Tracer | None = None,
     governance: Governance | None = None,
     tool_selector: ToolSelector | None = None,
+    guardrails: Guardrails | None = None,
 ) -> Any:
     tr = tracer or default_tracer()
     provider = provider_for(model.name)
@@ -105,18 +107,25 @@ def build_graph(
     def start(state: AgentState) -> AgentState:
         if state.get("messages"):
             return {}
-        system, ids = SYSTEM, []
+        system, ids, question, redacted = SYSTEM, [], state["question"], []
+        if guardrails and guardrails.pii:  # P5.1 in: before the model, memory or a checkpoint
+            red = guardrails.pii.redact(question)
+            question, redacted = red.text, list(red.detectors)
+        if guardrails and guardrails.spotlight_tools:
+            system = f"{SYSTEM}\n\n{RULE}"
         if recall is not None:
-            items = recall(state["tenant_id"], state["question"])
+            items = recall(state["tenant_id"], question)
             if items:
                 lessons = "\n".join(i.render() for i in items)
-                system = f"{SYSTEM}\n\nLessons from earlier tasks (may not apply):\n{lessons}"
+                system = f"{system}\n\nLessons from earlier tasks (may not apply):\n{lessons}"
                 ids = [i.id for i in items]
         return {
             "messages": [
                 {"role": "system", "content": system},
-                {"role": "user", "content": state["question"]},
+                {"role": "user", "content": question},
             ],
+            "question": question,
+            "redactions": redacted,
             "memory_ids": ids,
             "reflections": 0,
             "summary": "",
@@ -167,7 +176,14 @@ def build_graph(
             "summary": summary,
         }
         if d.final:
-            out |= {"status": "done", "stop_reason": "final", "answer": d.text}
+            answer = d.text
+            if guardrails and guardrails.pii:  # P5.1 out
+                red = guardrails.pii.redact(answer)
+                answer, msg["content"] = red.text, red.text
+                if red.detectors:  # raw blocks hold the unredacted text; rebuilt from content
+                    msg["raw"] = None
+                out["redactions"] = list(red.detectors)
+            out |= {"status": "done", "stop_reason": "final", "answer": answer}
         return out
 
     def route(state: AgentState) -> str:
@@ -248,6 +264,12 @@ def build_graph(
                     span.set_attribute("error.type", "tool_error")
             if compaction:
                 obs = truncate(obs, compaction.tool_result_chars)
+            if (
+                guardrails
+                and c["name"] in guardrails.spotlight_tools
+                and not obs.startswith((DENIAL_PREFIX, "error"))
+            ):
+                obs = spotlight(obs)
             out.append({"role": "tool", "tool_call_id": c["id"], "name": c["name"], "content": obs})
         return {"messages": out}
 

@@ -40,8 +40,12 @@ Acceptance: DLQ test, filtered-recall test, ablation row per config with CI link
 - P4.4 Locust scenario; p50/p95, cache savings -> RESULTS.md
 
 ## Phase 5: Guardrails  [CHECKPOINT: security results review]
-- P5.1 PII detect/redact in/out; P5.2 injected-doc suite; P5.3 plan/data separation + taint tags
-- P5.4 step-level tool-call checker + trace-level policy; latency + false-block metrics
+- P5.0 OIDC auth (Keycloak RS, scopes, tenant from token) replacing the admin key — IN REVIEW (PR A, ADR 009; Keycloak compose profile NOT ADDED)
+- P5.1 PII detect/redact in/out — IN REVIEW (PR A)
+- P5.2 injected-doc suite + spotlighting — IN REVIEW (PR A; model ASR from CI eval-security)
+- P5.3 plan/data separation + taint tags — PR B
+- P5.4 step-level tool-call checker + trace-level policy; latency + false-block metrics — PR B
+- Note: Phase 4 (gateway) not built yet; user chose Phase 5 first (2026-11-27).
 
 ## Phase 6: Evals + CI gate  [CHECKPOINT: human labels + threshold sign-off]
 - P6.1 trajectory evals; P6.2 judge calibration (kappa) vs evals/labels/; P6.3 MAST tagging + histogram

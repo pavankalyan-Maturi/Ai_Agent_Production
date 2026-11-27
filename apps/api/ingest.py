@@ -2,15 +2,16 @@
 
 from __future__ import annotations
 
-import re
 from typing import Annotated
 
-from fastapi import APIRouter, Header, HTTPException, Request
+from fastapi import APIRouter, Header, Request
 from pydantic import BaseModel, Field
+
+from apps.api.auth import TENANT_RE, Ingester
 
 router = APIRouter()
 
-TENANT_RE = re.compile(r"^[a-z0-9][a-z0-9_-]{0,62}$")
+__all__ = ["TENANT_RE", "router"]
 
 
 class IngestRequest(BaseModel):
@@ -28,16 +29,14 @@ class IngestResponse(BaseModel):
 def ingest(
     body: IngestRequest,
     request: Request,
-    x_tenant_id: Annotated[str, Header()],
+    who: Ingester,
     idempotency_key: Annotated[str | None, Header()] = None,
 ) -> IngestResponse:
-    # Tenant comes from a header until auth lands (Phase 5); validated, never free text.
-    if not TENANT_RE.match(x_tenant_id):
-        raise HTTPException(422, "invalid X-Tenant-Id")
+    # Tenant from the verified token (ADR 009), already checked against TENANT_RE.
     from apps.ingest.enqueue import enqueue_ingest
 
     celery_app, jobs = request.app.state.ingest_deps()
     r = enqueue_ingest(
-        celery_app, jobs, x_tenant_id, body.bucket, body.key, body.etag, ikey=idempotency_key
+        celery_app, jobs, who.tenant_id, body.bucket, body.key, body.etag, ikey=idempotency_key
     )
     return IngestResponse(idempotency_key=r.ikey, published=r.published)

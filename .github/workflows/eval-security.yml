@@ -1,0 +1,44 @@
+name: eval-security
+# P5.2 eval-gate:security. Offline scanner numbers always; Haiku ASR per arm (~$0.05, cached).
+on:
+  workflow_dispatch:
+    inputs:
+      max_usd: {description: "Hard cap on new API spend for this run", default: "1"}
+  pull_request:
+    paths: ["guardrails/**", "evals/security/**", "sentinel.yaml", ".github/workflows/eval-security.yml"]
+  push:
+    branches: [main]
+    paths: ["guardrails/**", "evals/security/**", "sentinel.yaml", ".github/workflows/eval-security.yml"]
+permissions: {contents: read}
+concurrency:
+  group: eval-security-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  security:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: astral-sh/setup-uv@v7
+        with: {version: "0.11.32", enable-cache: true}
+      - run: uv sync --frozen --python 3.12 --all-groups
+      - uses: actions/cache/restore@v4
+        with:
+          path: .cache/security_llm
+          key: security-llm-${{ github.run_id }}
+          restore-keys: security-llm-
+      - name: Run security eval
+        run: >-
+          uv run python -m evals.security.run --model haiku
+          --max-usd ${{ inputs.max_usd || '1' }} | tee -a "$GITHUB_STEP_SUMMARY"
+      - name: Save model responses
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: .cache/security_llm
+          key: security-llm-${{ github.run_id }}
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with: {name: security-eval, path: results/security}

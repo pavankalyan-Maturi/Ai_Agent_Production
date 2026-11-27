@@ -1,32 +1,31 @@
 # Handoff
 
 ## Done
-- Phases 0-2 and Phase 3 PR A and B merged (PR #1-#7).
-- Phase 3 PR C (this PR, not merged), ADR 008:
-  - **P3.4 A2A** (`agent_a2a/`): JWS ES256-signed agent card at `/.well-known/agent-card.json` with a JWKS. A client-side verifier pins the trusted `jku` and accepts only ES256.
-    - JSON-RPC at `/a2a/v1` runs the LangGraph agent as the token's tenant, in the read-only role and still governed.
-    - Tasks are scoped by owner (`tenant:sub`).
-  - **P3.3 tool retrieval** (`agent/tool_retrieval.py`, flag `PAP_TOOL_RETRIEVAL_RAGMCP`, off): top-k tool selection after the RBAC filter, which keeps tools already used.
-    - Scaling eval in `evals/tools/`, plus a CI workflow `eval-tools` (fastembed, no API spend).
-  - `agent_a2a` was added to mypy (CI and the CLAUDE.md gate) and to the Dockerfile.
+- Phases 0-3 merged (PR #1-#8). Phase 4 (gateway) NOT built: the user chose Phase 5 first.
+- Phase 5 PR A (this PR, not merged), ADR 009:
+  - **P5.0 auth** (`apps/api/auth.py`): OIDC resource server. JWKS or a static key; `iss`, `aud`, `exp`, `sub`, `tenant_id` required.
+    - `pap:admin` guards `/api/v1/security/*`, and `pap:ingest` guards `/v1/ingest`. Tenant from the token only.
+    - The admin key and the `X-Tenant-Id` header are removed. With no key configured the routes answer 503.
+  - **P5.1** `guardrails/pii.py`: the question is redacted before the model, memory or a checkpoint; the answer is redacted on the way out. Uses the library's Scanner.
+  - **P5.2** `guardrails/spotlight.py`: delimiting for `search`/`fetch_doc` output, opt-in via `build_graph(guardrails=...)`.
+    - Injected-doc suite `evals/security/` (40 attacks in 8 families, 20 benign). CI `eval-security` runs Haiku ASR per arm.
+  - `guardrails` added to mypy (CI + CLAUDE.md gate) and to the Dockerfile.
 
 ## Verified here
-- Gate: ruff, format, mypy and 123 unit tests, including 10 A2A and 5 tool-retrieval tests.
-- Integration against local pgvector passes. pip-audit is clean.
-- Tool scaling with the hash embedder: at 163 tools, recall@10 is 0.969 and spec tokens drop from 4,858 to about 295.
+- Gate: ruff, format, mypy, 139 unit tests (16 new: auth, guardrails, eval harness).
+- Offline security eval: the scanner detects 25% of the 40 injected docs (direct_override and fake_markup only), with 0/20 false blocks. Governed call p50 1.47 ms.
 
 ## Not verified
-- Tool scaling with fastembed. It runs in CI `eval-tools`; read the numbers from that job.
-- End-to-end task success with tool retrieval on a real model (NOT MEASURED).
-- A2A with a production model and a persistent task store. There is no runnable entry yet (Phase 4 LiteLLM).
-- The kind/Kubernetes e2e for Phase 3 (no cluster here).
+- Haiku ASR per arm (CI `eval-security`, < $0.10).
+- Keycloak itself: no compose profile yet. Tokens in tests are minted locally (RS256).
 
 ## Open
-- Library 0.3 follow-up: a minimal change to test it, when the owner ships it. The upstream list is `/mnt/project-files/phase3/mcp-rbac-gateway-0.3-prompt.md`.
-- A2A: DatabaseTaskStore on Postgres, streaming, and key pinning or x5c.
+- PR B: P5.3 plan/data separation + taint tags (CaMeL-lite) and P5.4 step-level + trace-level checks, with false-block and latency numbers.
+- Keycloak compose profile (dev realm, `tenant_id` mapper). Approvals: the approver comes from the token, not the body, and the pending list is tenant-filtered (library broker is global).
+- Merge mcp_server's JwtVerifier into apps/api/auth. Phase 4 gateway. HotpotQA memory gate red on main (separate task).
 
 ## Next step
-Review and merge PR C. That closes Phase 3 (checkpoint: protocol conformance review). Phase 4 on request.
+Review PR A. Then PR B in a fresh thread.
 
 ## Versions pinned
-docs/SPEC.md Pins table, ADR 002-008 (`a2a-sdk>=1.1,<2` → 1.3.1, `mcp[cli]==2.3.*`, `mcp-rbac-gateway>=0.2.0,<0.3`).
+docs/SPEC.md Pins table, ADR 002-009 (PyJWT 2.15.1, mcp-rbac-gateway 0.2.0).

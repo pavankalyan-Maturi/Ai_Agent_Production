@@ -13,6 +13,7 @@ from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 from starlette.routing import Match
 
 from apps.api import health, ingest, security
+from apps.api.auth import verifier_from_settings
 from apps.api.settings import Settings, get_settings
 from apps.api.telemetry import HTTP_LATENCY, HTTP_REQUESTS, build_tracer_provider, instrument
 
@@ -72,6 +73,7 @@ def create_app(
 
     app = FastAPI(title="prod-agent-platform", version="0.1.0", lifespan=lifespan)
     app.state.settings = settings
+    app.state.verifier = verifier_from_settings(settings)
     app.state.readiness_checks = (
         health.DEFAULT_CHECKS if readiness_checks is None else readiness_checks
     )

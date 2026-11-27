@@ -1,34 +1,24 @@
 """/api/v1/security: pending tool approvals and the governance audit trail (ADR 006).
 
-Protected by an admin API key (``Authorization: Bearer $PAP_ADMIN_API_KEY``) until real auth
-lands in Phase 5. With no key configured the routes answer 503, so they are never open by
-accident.
+Protected by OIDC bearer tokens with the ``pap:admin`` scope (ADR 009). The audit trail is the
+caller's own tenant only: the tenant comes from the token. With auth unconfigured the routes
+answer 503, so they are never open by accident.
 """
 
 from __future__ import annotations
 
-import hmac
 import sqlite3
 from pathlib import Path
 from typing import Annotated, Any
 
-from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request
+from fastapi import APIRouter, Depends, Query, Request
 from mcp_rbac_gateway import AuditDecision, create_approval_router
 from pydantic import BaseModel
 
-from apps.api.ingest import TENANT_RE
+from apps.api.auth import ADMIN, Admin, require
 
 PREFIX = "/api/v1/security"
 BLOCKED = [d.value for d in AuditDecision if d.is_block]
-
-
-def require_admin(request: Request, authorization: Annotated[str | None, Header()] = None) -> None:
-    key = request.app.state.settings.admin_api_key
-    if key is None:
-        raise HTTPException(503, "security API disabled: set PAP_ADMIN_API_KEY")
-    expected = f"Bearer {key.get_secret_value()}"
-    if authorization is None or not hmac.compare_digest(authorization, expected):
-        raise HTTPException(401, "invalid admin key", headers={"WWW-Authenticate": "Bearer"})
 
 
 class AuditRow(BaseModel):
@@ -78,10 +68,10 @@ def read_audit(
 
 def build_router(get_governance: Any) -> APIRouter:
     """get_governance() -> agent.governance.Governance, built once per process."""
-    router = APIRouter(prefix=PREFIX, tags=["security"], dependencies=[Depends(require_admin)])
+    router = APIRouter(prefix=PREFIX, tags=["security"], dependencies=[Depends(require(ADMIN))])
 
     # The gateway's own approvals API: GET /approvals, GET/POST /approvals/{id}/approve|deny.
-    # token=None because require_admin already guards the whole prefix.
+    # token=None because require(ADMIN) already guards the whole prefix.
     class _LazyBroker:
         def __getattr__(self, name: str) -> Any:
             return getattr(get_governance().broker, name)
@@ -91,14 +81,12 @@ def build_router(get_governance: Any) -> APIRouter:
     @router.get("/audit", response_model=list[AuditRow])
     def audit(
         request: Request,
-        tenant_id: Annotated[str, Query(description="Required: rows are per tenant")],
+        who: Admin,
         limit: Annotated[int, Query(ge=1, le=500)] = 50,
         blocked_only: bool = False,
         tool: str | None = None,
     ) -> list[AuditRow]:
-        if not TENANT_RE.match(tenant_id):
-            raise HTTPException(422, "invalid tenant_id")
         db = Path(request.app.state.settings.sentinel_audit_db)
-        return read_audit(db, tenant_id, limit=limit, blocked_only=blocked_only, tool=tool)
+        return read_audit(db, who.tenant_id, limit=limit, blocked_only=blocked_only, tool=tool)
 
     return router
