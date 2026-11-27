@@ -51,4 +51,10 @@ semantic caching and an SSE endpoint. Every cache key and query must carry the t
 - TPM is charged on an estimate, not actual usage; no refund on short completions.
 - The static LiteLLM UI bundle is still served at `/ui` with `DISABLE_ADMIN_UI`; its API calls
   are 403 via `allowed_routes`. Mitigated by no published port.
-- The agent graph does not use the cache or limiter yet (sync path); only `/v1/chat/stream` does.
+- Agent graph (follow-up PR): `gateway/agent_model.py` `GatewayModel` wraps any `ChatModel`
+  with the same rpm/tpm buckets (`SyncRateLimiter`, shared keys with `/v1/chat/stream`) and a
+  tenant-scoped exact cache of the whole `Decision` (tool calls + provider blocks). A hit reports
+  0 tokens. No semantic cache on agent turns (tool traffic). Bound to one tenant + caller per run
+  because `decide()` carries no principal; exact cache at temperature > 0 replays one sample,
+  which is the intended trade for cost. Not yet wired into evals (would change eval-gate spend
+  accounting); callers opt in.

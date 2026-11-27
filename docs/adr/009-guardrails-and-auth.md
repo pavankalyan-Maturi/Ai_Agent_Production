@@ -54,11 +54,15 @@ Status: proposed (PR A of Phase 5). PR B adds plan/data separation, taint and tr
 - Model ASR per arm: from CI `eval-security` (Haiku 5.5). NOT MEASURED here (no API access).
 
 ## Consequences
-- Every API client needs a token. Compose smoke doesn't call these routes. A Keycloak compose
-  profile with a dev realm and the `tenant_id` mapper is a follow-up: UNVERIFIED until it runs.
+- Every API client needs a token. Compose smoke doesn't call these routes. Compose profile `auth`
+  (Keycloak 26.4.2 `start-dev --import-realm`, `deploy/compose/keycloak/pap-realm.json`): realm
+  `pap`, confidential client `pap-demo` (client_credentials only), audience mapper `pap-api`,
+  hardcoded `tenant_id=demo`, scopes `pap:chat pap:ingest` (+ optional `pap:admin`).
+  `scripts/keycloak_smoke.sh` (compose-smoke CI) checks claims, anon 401 and token 200.
+  One tenant per client: a second tenant is a second client. Dev secrets only.
 - The approvals API still takes the approver name from the request body, and pending approvals
   are not tenant-filtered (the library's broker is global, pinned <0.3). Both are open.
 - mcp_server keeps its own JwtVerifier (ADR 007). Merging the two verifiers is a small follow-up.
 
 ## Pins
-PyJWT 2.15.1 (`jwt.PyJWKClient`), mcp-rbac-gateway 0.2.0, Keycloak 26.x (when the profile lands).
+PyJWT 2.15.1 (`jwt.PyJWKClient`), mcp-rbac-gateway 0.2.0, Keycloak 26.4.2 (compose `auth` profile).
