@@ -44,9 +44,10 @@ observation for the model: the tool's redacted output, or a structured denial �
   - With no role, every tool is denied (`default_action: deny`).
   - The model is only offered the tools its role allows.
 - **Approvals.** The policy decides what needs a human, and the graph's checkpointed pause does the waiting, so a pending approval survives restarts. Calls made outside the graph wait on the gateway's approval broker.
-- **API.** Both endpoints need `Authorization: Bearer $PAP_ADMIN_API_KEY` and are off (503) until it is set:
+- **API.** Both endpoints need an OIDC access token with scope `pap:admin` ([ADR 009](docs/adr/009-guardrails-and-auth.md)); with no `PAP_OIDC_JWKS_URL`/`PAP_OIDC_KEY` they answer 503:
   - `GET /api/v1/security/approvals`, `POST …/{id}/approve|deny`
-  - `GET /api/v1/security/audit?tenant_id=…`
+  - `GET /api/v1/security/audit` (the token's tenant only)
+- `POST /v1/ingest` needs scope `pap:ingest`; the tenant comes from the token's `tenant_id` claim.
 - **Cost.** About 2 ms per tool call (RESULTS, Phase 3A).
 
 ## MCP server

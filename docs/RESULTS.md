@@ -253,3 +253,20 @@ k=10:
 
 **HotpotQA (eval-agent) on PR #8, first run:** off 0.487 / on 0.432 / gated 0.403 F1. The gate failed (gated −0.084, 95% CI [−0.139, −0.034]). That run made 933 fresh Haiku calls ($0.19) because the response cache was not reachable from a new PR. The memory path was not changed in this PR; the memory arms are noisy across fresh samples (PR #5 run 2: gated −0.035). The fix is that main now seeds the cache and red runs save it, so unchanged prompts reproduce instead of re-rolling.
 - **Not measured:** end-to-end task success with a real model (NOT MEASURED).
+
+## Phase 5A: guardrails at the edges, spotlighting, OIDC auth
+Command: `uv run python -m evals.security.run` (offline; ran here). Model arms: CI `eval-security`.
+
+| family | gateway scanner detected |
+|---|---|
+| direct_override | 100% |
+| fake_markup | 100% |
+| role_override, exfil_tool, paraphrase, authority, multilingual, encoded | 0% |
+| **all 40 injected docs** | **25%** |
+| false blocks on 20 benign docs | 0% |
+
+- Latency: governed tool call p50 1.47 ms / p95 1.94 ms (n=300). PII redaction p50 0.04 ms/doc.
+- Attack success rate (Haiku 5.5, none / scanner / scanner+spotlight): NOT MEASURED here; read
+  the `eval-security` job summary.
+- What did not replicate: nothing yet. The heuristic scanner simply misses most families, which
+  is expected for regex rules and is the case for PR B's plan/data separation.

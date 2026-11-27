@@ -31,6 +31,8 @@ class AgentState(TypedDict, total=False):
     reflections: int
     verified: bool
     failure: str
+    # Phase 5 guardrails: detector names that fired on the user turn or the answer (no values).
+    redactions: Annotated[list[str], operator.add]
 
 
 @dataclass(frozen=True)

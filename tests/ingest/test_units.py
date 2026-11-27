@@ -3,11 +3,11 @@ import pytest
 from fastapi.testclient import TestClient
 
 from apps.api.main import create_app
-from apps.api.settings import Settings
 from apps.api.telemetry import build_tracer_provider
 from apps.ingest.enqueue import enqueue_ingest
 from apps.ingest.jobs import idempotency_key
 from apps.ingest.tasks import PoisonDocument, backoff, fetch_text
+from tests.tokens import auth_settings, bearer
 
 
 class FakeBody:
@@ -98,15 +98,18 @@ def test_enqueue_dedupes_and_forgets_on_broker_failure() -> None:
 
 def test_ingest_endpoint() -> None:
     jobs, celery = FakeJobs(), FakeCelery()
-    s = Settings(env="ci")
+    s = auth_settings(env="ci")
     app = create_app(s, build_tracer_provider(s), {}, ingest_deps=lambda: (celery, jobs))
     with TestClient(app) as c:
         body = {"bucket": "docs", "key": "a/b.txt", "etag": "e1"}
-        r1 = c.post("/v1/ingest", json=body, headers={"X-Tenant-Id": "acme"})
-        r2 = c.post("/v1/ingest", json=body, headers={"X-Tenant-Id": "acme"})
-        bad = c.post("/v1/ingest", json=body, headers={"X-Tenant-Id": "Robert'); DROP"})
-        missing = c.post("/v1/ingest", json=body)
+        r1 = c.post("/v1/ingest", json=body, headers=bearer("acme", "pap:ingest"))
+        r2 = c.post("/v1/ingest", json=body, headers=bearer("acme", "pap:ingest"))
+        bad = c.post("/v1/ingest", json=body, headers=bearer("Robert'); DROP", "pap:ingest"))
+        admin_only = c.post("/v1/ingest", json=body, headers=bearer("acme", "pap:admin"))
+        # The old header no longer selects a tenant.
+        missing = c.post("/v1/ingest", json=body, headers={"X-Tenant-Id": "acme"})
     assert r1.status_code == 202 and r1.json()["published"] is True
     assert r2.json() == {"idempotency_key": r1.json()["idempotency_key"], "published": False}
-    assert bad.status_code == 422 and missing.status_code == 422
+    assert bad.status_code == 401 and missing.status_code == 401
+    assert admin_only.status_code == 403
     assert celery.sent == [["acme", "docs", "a/b.txt", r1.json()["idempotency_key"]]]

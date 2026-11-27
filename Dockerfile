@@ -14,6 +14,7 @@ COPY retrieval ./retrieval
 COPY agent ./agent
 COPY mcp_server ./mcp_server
 COPY agent_a2a ./agent_a2a
+COPY guardrails ./guardrails
 COPY sentinel.yaml ./
 RUN --mount=type=secret,id=extra_ca sh -c "$CA_SETUP; uv sync --frozen --no-dev --group eval"
 

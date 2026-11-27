@@ -40,8 +40,12 @@ class Settings(BaseSettings):
     # Tool governance (Phase 3, ADR 006): mcp-rbac-gateway policy and its SQLite audit trail.
     sentinel_config: str = "sentinel.yaml"
     sentinel_audit_db: str = ".sentinel/audit.db"
-    # Admin key for /api/v1/security/* until real auth (Phase 5). Unset = those routes are off.
-    admin_api_key: SecretStr | None = None
+    # OIDC resource server (ADR 009): Keycloak issues, we verify. Neither key nor JWKS = 503.
+    oidc_issuer: str = "http://localhost:8080/realms/pap"
+    oidc_audience: str = "pap-api"
+    oidc_jwks_url: str | None = None  # e.g. {issuer}/protocol/openid-connect/certs
+    oidc_key: SecretStr | None = None  # tests/dev: PEM public key or HS256 secret
+    oidc_algorithms: list[str] = ["RS256"]
 
     # P3.3 tool retrieval (RAG-MCP): offer the model only the top-k tools for the task.
     tool_retrieval_ragmcp: bool = False

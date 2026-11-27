@@ -14,3 +14,4 @@ Claude cannot read your balance. Paste actuals from Settings > Usage into the la
 | 2026-11-27 | P3A | mcp-rbac-gateway governance: policy, guarded tools, approvals/audit API, tests, bench, ADR 006, PR | Opus-class (session default) | ~1.5M in (mostly cached), ~45k out | ~$4-6 | |
 | 2026-11-27 | P3B | Stateless MCP server (OAuth RS, both eras), mcp-rbac-gateway StatelessHttpProxy in front, 24 tests, bench, ADR 007, PR | Opus-class (session default) | ~1.5M in (mostly cached), ~40k out | ~$4-6 | |
 | 2026-11-27 | P3C | A2A signed card + JSON-RPC over the agent, tool retrieval flag + scaling eval, 15 tests, ADR 008, PR | Opus-class (session default) | ~1.5M in (mostly cached), ~40k out | ~$4-6 | |
+| 2026-11-27 | P5A | OIDC auth, PII edges, spotlighting, injected-doc suite + eval-security CI, 16 tests, ADR 009, PR | Opus-class (session default) | ~1.2M in (mostly cached), ~35k out | ~$3-5 | |
