@@ -35,6 +35,7 @@ from agent.compaction import (
     truncate,
     view,
 )
+from agent.governance import DENIAL_PREFIX, Governance
 from agent.memory import MemoryItem
 from agent.model import ChatModel, Decision, cost_usd
 from agent.reflection import Verifier, reflection_prompt
@@ -63,6 +64,7 @@ def build_graph(
     verifiers: Sequence[Verifier] = (),
     max_reflections: int = 1,
     tracer: Tracer | None = None,
+    governance: Governance | None = None,
 ) -> Any:
     tr = tracer or default_tracer()
     provider = provider_for(model.name)
@@ -70,6 +72,22 @@ def build_graph(
     summarize = summarizer or extractive_summarizer()
     by_name: Mapping[str, Tool] = {t.spec.name: t for t in tools}
     specs = [t.spec for t in tools]
+
+    def needs_human(state: AgentState, c: dict[str, Any]) -> bool:
+        tool = by_name.get(c["name"])
+        if tool is None:
+            return False
+        if tool.requires_approval:
+            return True
+        return bool(
+            governance and governance.needs_approval(state.get("role"), c["name"], c["args"])
+        )
+
+    def offered(state: AgentState) -> list[Any]:
+        """Tool specs the model sees: with governance, only the role's allowlist."""
+        if governance is None:
+            return specs
+        return [t.spec for t in governance.visible(state.get("role"), list(tools))]
 
     def start(state: AgentState) -> AgentState:
         if state.get("messages"):
@@ -116,7 +134,7 @@ def build_graph(
             span.set_attribute(ga.GEN_AI_PROVIDER_NAME, provider)
             span.set_attribute(ga.GEN_AI_REQUEST_MODEL, model.name)
             span.set_attribute(TENANT, state["tenant_id"])
-            d: Decision = model.decide(v, specs)
+            d: Decision = model.decide(v, offered(state))
             span.set_attribute(ga.GEN_AI_USAGE_INPUT_TOKENS, d.input_tokens)
             span.set_attribute(ga.GEN_AI_USAGE_OUTPUT_TOKENS, d.output_tokens)
         d_in, d_out = d.input_tokens + s_in, d.output_tokens + s_out
@@ -145,21 +163,31 @@ def build_graph(
         if state.get("status") == "done":
             return "reflect" if verifiers else END
         calls = state["messages"][-1]["tool_calls"]
-        flagged = any(
-            by_name.get(c["name"]) and by_name[c["name"]].requires_approval for c in calls
-        )
-        return "approve" if flagged else "act"
+        return "approve" if any(needs_human(state, c) for c in calls) else "act"
 
     def approve(state: AgentState) -> AgentState:
         # interrupt() must come first: on resume this node re-runs from the top.
         calls = state["messages"][-1]["tool_calls"]
-        flagged = [
-            c for c in calls if by_name.get(c["name"]) and by_name[c["name"]].requires_approval
-        ]
-        decision = interrupt({"tool_calls": flagged})
+        flagged = [c for c in calls if needs_human(state, c)]
+        decision = interrupt({"tool_calls": flagged, "role": state.get("role")})
         approved = bool(decision.get("approved")) if isinstance(decision, dict) else bool(decision)
+        who = (
+            str(decision.get("approver") or "reviewer")
+            if isinstance(decision, dict)
+            else "reviewer"
+        )
         if approved:
-            return {}
+            return {"approvals": {**state.get("approvals", {}), **{c["id"]: who for c in flagged}}}
+        if governance is not None:
+            for c in flagged:
+                governance.record_rejection(
+                    c["name"],
+                    tenant_id=state["tenant_id"],
+                    role=state.get("role"),
+                    args=c["args"],
+                    call_id=c["id"],
+                    approver=who,
+                )
         # Rejected: answer every call with a rejection so the transcript stays valid.
         return {
             "messages": [
@@ -187,12 +215,23 @@ def build_graph(
                 span.set_attribute(TENANT, state["tenant_id"])
                 if tool is None:
                     obs = f"error: unknown tool {c['name']}"
+                elif governance is not None:
+                    obs = governance.execute(
+                        tool,
+                        tenant_id=state["tenant_id"],
+                        role=state.get("role"),
+                        args=c["args"],
+                        call_id=c["id"],
+                        approver=state.get("approvals", {}).get(c["id"]),
+                    )
                 else:
                     try:
                         obs = tool.fn(state["tenant_id"], c["args"])
                     except Exception as e:  # tool failure is an observation, not a crash
                         obs = f"error: {type(e).__name__}: {e}"[:500]
-                if obs.startswith("error"):
+                if obs.startswith(DENIAL_PREFIX):
+                    span.set_attribute("error.type", "tool_denied")
+                elif obs.startswith("error"):
                     span.set_attribute("error.type", "tool_error")
             if compaction:
                 obs = truncate(obs, compaction.tool_result_chars)

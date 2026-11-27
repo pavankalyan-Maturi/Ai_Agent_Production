@@ -12,6 +12,8 @@ Status = Literal["running", "done", "degraded"]
 class AgentState(TypedDict, total=False):
     tenant_id: str  # set by the caller from the authenticated request, never by the model
     question: str
+    role: str  # RBAC role (sentinel.yaml), set by the caller like tenant_id, never by the model
+    approvals: dict[str, str]  # tool_call_id -> approver, filled when a human approves a pause
     messages: Annotated[list[dict[str, Any]], operator.add]
     steps: int  # model calls made
     tokens: int  # input + output tokens

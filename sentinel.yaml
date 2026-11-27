@@ -1,0 +1,59 @@
+# Zero-trust tool policy for the agent (mcp-rbac-gateway 0.2.x). ADR 006.
+# Every run gets exactly one role. A tool no rule mentions is denied (default_action: deny).
+version: 1
+default_agent: anonymous
+default_action: deny
+
+agents:
+  anonymous:
+    description: No role bound. Nothing is allowed.
+    deny: ["*"]
+
+  researcher:
+    description: Read-only planner/research role. Retrieval and arithmetic, no side effects.
+    allow: [search, fetch_doc, calculator]
+    arguments:
+      search:
+        query: {required: true, max_length: 500, deny_pattern: "[\\x00-\\x08\\x0b\\x0c\\x0e-\\x1f]"}
+      fetch_doc:
+        # doc ids come from search results; no paths, no control characters.
+        doc_id: {required: true, max_length: 200, deny_pattern: "\\.\\./|^/|[\\x00-\\x1f]"}
+      calculator:
+        expression: {required: true, pattern: "[0-9+\\-*/%(). eE]{1,200}"}
+
+  operator:
+    description: Execution role. Everything a researcher can do, plus side-effecting tools that a human approves first.
+    inherits: [researcher]
+    allow: [create_ticket]
+    require_approval: [create_ticket]
+    arguments:
+      create_ticket:
+        title: {required: true, max_length: 120, deny_pattern: "[\\r\\n]"}
+        body: {max_length: 2000}
+        priority: {allowed_values: [low, medium, high]}
+
+scanner:
+  enabled: true
+  redact_inputs: true       # secrets in tool arguments (default secret detectors, no PII)
+  redact_outputs: true      # secrets and PII in tool results, before the model sees them
+  scan_inputs_for_injection: true
+  strip_invisible: true
+  prompt_injection:
+    enabled: true
+    action: block
+    threshold: 0.7
+
+hitl:
+  enabled: true
+  # The agent passes its own approver (graph interrupt + approvals API); see ADR 006.
+  # Standalone use of this file with the CLI fails closed.
+  mode: auto_deny
+  timeout_seconds: 300
+  destructive_hint: true
+
+audit:
+  enabled: true
+  path: ${PAP_SENTINEL_AUDIT_DB:-.sentinel/audit.db}
+  log_arguments: true       # already redacted by the scanner
+  log_results: false        # PII off: results never stored
+  max_payload_chars: 2000

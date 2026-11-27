@@ -11,6 +11,8 @@ COPY pyproject.toml uv.lock README.md ./
 RUN --mount=type=secret,id=extra_ca sh -c "$CA_SETUP; uv sync --frozen --no-dev --group eval --no-install-project"
 COPY apps ./apps
 COPY retrieval ./retrieval
+COPY agent ./agent
+COPY sentinel.yaml ./
 RUN --mount=type=secret,id=extra_ca sh -c "$CA_SETUP; uv sync --frozen --no-dev --group eval"
 
 FROM python:3.12-slim
