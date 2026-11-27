@@ -351,3 +351,30 @@ $0.15 at 800/200 tokens per call. Lookup p50/p95: exact hit 0.11/0.18 ms, miss (
 up to 256 vectors) 1.6/2.8 ms. Did not replicate the large semantic-cache gains often quoted:
 on this workload rewording is rare, so exact hits dominate; semantic adds <1 pt.
 Real-embedder (bge-small) false hits NOT MEASURED.
+
+## Phase 6A: eval-gate (ADR 012)
+
+CI eval-gate run 45934430589 (PR #14), shipped config (memory off), HotpotQA first 100.
+Agent: 268 calls, all replayed from the response cache, $0.00; F1 0.501 / EM 0.360, the PR #13
+baseline exactly (cache replay makes an unchanged agent reproduce, not re-sample). Judge: 100
+Haiku calls, $0.003. Gate: pass (F1 on scalar fallback; per-question baseline not committed yet).
+
+| Trajectory metric (n=100) | Value |
+|---|---|
+| Tool calls / question | 2.22 |
+| Redundant-call rate | 0.0 |
+| Evidence recall (supporting titles seen) | 0.91 |
+| Citation precision (cited ids that are supporting) | 0.747 |
+| Grounded (every cited id came from a tool) | 0.77 |
+| Degraded (budget hit) | 0.0 |
+
+MAST histogram (rule-based, multi-label) over the 19 runs the judge called INCORRECT:
+FM-1.1 17, FM-3.2 14, FM-3.1 8, FM-3.3 3; FM-1.3 and FM-1.5 0.
+
+- The judge calls 81/100 answers correct while mean F1 is 0.501: token F1 under-credits this
+  agent heavily. Whether the judge or F1 is closer to a human is the kappa question, NOT MEASURED
+  until labels exist.
+- FM-1.1 dominates: most failures are format (long answer or no citation), not retrieval. With
+  evidence recall at 0.91, the agent usually saw the right paragraphs.
+- MAST tags are rule approximations, UNVERIFIED against human tags. FM-2.x not applicable.
+- P6.5 GEPA vs MIPROv2: cut (user decision), not run.

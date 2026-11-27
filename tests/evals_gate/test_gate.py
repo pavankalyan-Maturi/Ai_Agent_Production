@@ -163,7 +163,7 @@ def test_gate_scalar_fallback_cost_cap_and_kappa() -> None:
     rows, fails = G.run_gate(CFG, _cur([0.4] * 10), {}, {"n": 0}, 0.0)
     assert fails and "scalar" in next(r for r in rows if r["metric"] == "f1")["why"]
     _, fails = G.run_gate(CFG, _cur([0.6] * 10), {}, {"n": 0}, 5.0)
-    assert fails == ["spend $5.00 > cost cap $1.00"]
+    assert fails == ["spend $5.00 > cost cap $0.30"]
     calib = {"n": 100, "judge_kappa": [0.7, 0.6, 0.8]}
     cfg = {
         **CFG,

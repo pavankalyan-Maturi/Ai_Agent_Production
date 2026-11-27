@@ -4,7 +4,7 @@ name: eval-gate
 on:
   workflow_dispatch:
     inputs:
-      max_usd: {description: "Hard cap on new agent API spend", default: "1"}
+      max_usd: {description: "Hard cap on new agent API spend", default: "0.25"}
   pull_request:
     paths: ["agent/**", "evals/**", "retrieval/**", ".github/workflows/eval-gate.yml"]
   # Runs on main seed the response cache (Actions caches are branch-scoped).
@@ -51,9 +51,9 @@ jobs:
       - name: Run shipped config (memory off)
         run: >-
           uv run python -m evals.agent.run --dsn postgresql://t:t@localhost:5432/t
-          --questions 100 --arms off --no-gate --max-usd ${{ inputs.max_usd || '1' }}
+          --questions 100 --arms off --no-gate --max-usd ${{ inputs.max_usd || '0.25' }}
       - name: Gate (trajectory, MAST, judge + kappa, paired bootstrap, cost cap)
-        run: uv run python -m evals.gate --judge && cat results/gate/report.md >> "$GITHUB_STEP_SUMMARY"
+        run: uv run python -m evals.gate --judge --max-usd 0.05 && cat results/gate/report.md >> "$GITHUB_STEP_SUMMARY"
       - name: Save model responses
         if: always()
         uses: actions/cache/save@v4
