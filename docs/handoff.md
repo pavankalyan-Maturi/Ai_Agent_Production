@@ -1,37 +1,36 @@
 # Handoff
 
 ## Done
-- Phases 0-5 merged (PR #1-#12). PR #13 merged: eval-agent gates only the shipped no-memory
-  config against its recorded baseline (0.501 F1); memory arms report-only. (PR #13 left no
-  handoff or COSTS row; both added here.)
-- Phase 6 PR A (this PR, ADR 012):
-  - **P6.1** `evals/trajectory.py`: tool calls, redundant calls, evidence recall vs HotpotQA
-    supporting titles (`hotpot.py` now parses them; cache file v2), citation precision,
-    grounded and degraded rates. `evals.agent.run` writes `trajectories.jsonl` for arm off.
-  - **P6.2** `evals/judge.py`: cached Haiku CORRECT/INCORRECT judge, Cohen's kappa + bootstrap
-    CI vs `evals/labels/hotpot_correctness.csv`, F1-rule kappa as the lexical baseline, label
-    pool CSV export without scores.
-  - **P6.3** rule-based MAST tags (FM-1.1, 1.3, 1.5, 3.1, 3.2, 3.3) + histogram.
-  - **P6.4** `evals/gate.py` + `evals/gate.toml` + `eval-gate.yml`: paired bootstrap per
-    question, per-metric enforcement, $0.30 cost cap. eval-agent (memory ablation) is now manual.
+- Phases 0-6 merged (PR #1-#17).
+- Phase 4 follow-ups (this PR):
+  - `gateway/agent_model.py` `GatewayModel`: wraps any `ChatModel` so the agent graph's model
+    node goes through the gateway policy: rpm/tpm buckets (`SyncRateLimiter` in
+    `gateway/ratelimit.py`, same keys as `/v1/chat/stream`), bounded wait then `RateLimited`,
+    tenant-scoped exact cache of the full `Decision` (tool calls + provider blocks, hit = 0
+    tokens). ADR 011 limits section updated.
+  - Keycloak compose profile `auth` (26.4.2, realm import `deploy/compose/keycloak/pap-realm.json`,
+    client `pap-demo`, `tenant_id=demo`, `aud=pap-api`); api env points JWKS at it.
+    `scripts/keycloak_smoke.sh` runs in compose-smoke CI. ADR 009 + SPEC pin updated.
+  - Bug found by that smoke (first authed `/v1/chat/stream` call in compose): fastembed weights
+    not downloadable -> 500. `build_deps` now falls back to exact-only on any embedder load error.
 
 ## Verified here
-- Gate: ruff, format, mypy, 165 unit tests (7 new in tests/evals_gate).
-- `python -m evals.gate` end to end on a synthetic trajectory file (no model).
+- Gate: ruff, format, mypy, full pytest (7 new tests in tests/gateway/test_agent_model.py,
+  real Redis), incl. a two-run agent graph where run 2 makes zero model calls.
+- `docker compose config` with `--profile auth`.
 
 ## Not verified
-- CI eval-gate on PR #14: F1 0.501 reproduced from cache ($0.00), judge $0.003; RESULTS.md Phase 6A.
-- Judge kappa 0.827 [0.657, 0.96] vs 100 human labels (F1 rule 0.241). MAST rule tags not checked against human tags.
+- Keycloak image pull and realm import: quay.io is blocked in this sandbox; only the
+  compose-smoke CI step (`scripts/keycloak_smoke.sh`) exercises it.
 
 ## Open
-- Labels in (PR #16) and per-question baseline committed (PR #17). Thresholds signed off: f1,
-  judge_correct and cost cap enforced; trajectory metrics and $/q report-only.
-- P6.5 GEPA vs MIPROv2: CUT by user decision (cut list #2), recorded in ADR 012.
+- Evals still construct `AnthropicModel` directly; wrapping them in `GatewayModel` would change
+  eval-gate spend accounting, so it is opt-in and not done.
+- Approvals API approver from body + untenanted pending approvals (ADR 009, library <0.3).
 - Gate covers the agent eval only; retrieval/security keep their own workflow rules.
-- From before: agent graph does not use gateway cache/limiter; Keycloak compose profile.
 
 ## Next step
-Phase 6 done once PR #17 merges. Next: Phase 7 (vLLM, human-run) or the deferred Phase 4 follow-ups, in a fresh thread.
+Phase 7 (vLLM runbook, human-run GPU) in a fresh thread.
 
 ## Versions pinned
-No new pins (tomllib is stdlib). docs/SPEC.md Pins table, ADR 002-012.
+Keycloak 26.4.2 (new row in docs/SPEC.md). Otherwise unchanged: SPEC Pins table, ADR 002-012.

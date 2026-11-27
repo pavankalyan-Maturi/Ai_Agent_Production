@@ -68,6 +68,8 @@ def build_deps(settings: Any) -> Callable[[], ChatDeps]:
                     embedder = FastEmbedEmbedder()
                 except ImportError:
                     log.warning("fastembed not installed: semantic cache off, exact cache only")
+                except Exception as e:  # weights not downloadable (air-gapped, CI compose)
+                    log.warning("embedder load failed (%s): semantic cache off, exact only", e)
             key = settings.llm_api_key.get_secret_value() if settings.llm_api_key else ""
             http = httpx.AsyncClient(base_url=settings.llm_gateway_url, timeout=60.0)
             cache.append(

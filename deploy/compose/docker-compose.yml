@@ -2,6 +2,7 @@
 #   core   : postgres+pgvector, pgbouncer, redis, rabbitmq, api, ingest-worker, s3
 #   obs    : otel-collector, prometheus, grafana, loki
 #   llmobs : langfuse v4 (web, worker, clickhouse, redis, S3) -- heavy, off by default
+#   auth   : keycloak (OIDC IdP for the api, realm `pap`, dev client `pap-demo`)
 #   full   : everything
 # Usage: docker compose -f deploy/compose/docker-compose.yml --env-file .env --profile core up -d
 name: pap
@@ -102,11 +103,33 @@ services:
       PAP_OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
       PAP_LLM_GATEWAY_URL: http://litellm:4000
       PAP_LLM_API_KEY: ${LITELLM_MASTER_KEY:-sk-pap-dev-only}
+      # Tokens carry iss=http://localhost:8080/realms/pap (KC_HOSTNAME); keys come over the
+      # compose network. Without the auth profile, protected routes answer 401 (no IdP).
+      PAP_OIDC_ISSUER: http://localhost:8080/realms/pap
+      PAP_OIDC_JWKS_URL: http://keycloak:8080/realms/pap/protocol/openid-connect/certs
     depends_on:
       pgbouncer: {condition: service_started}
       redis: {condition: service_healthy}
       rabbitmq: {condition: service_healthy}
     ports: ["127.0.0.1:8000:8000"]
+
+  # ---------------- auth (Phase 5 follow-up, ADR 009) ----------------
+  # Dev-mode Keycloak with an imported realm: H2 store, no persistence, dev-only secrets.
+  # Token: curl -s -d grant_type=client_credentials -d client_id=pap-demo \
+  #   -d client_secret=pap-dev-only-secret localhost:8080/realms/pap/protocol/openid-connect/token
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.4.2
+    profiles: [auth, full]
+    command: ["start-dev", "--import-realm"]
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-pap-dev-only}
+      KC_HOSTNAME: http://localhost:8080
+      KC_HOSTNAME_BACKCHANNEL_DYNAMIC: "true"
+      KC_HEALTH_ENABLED: "true"
+    volumes:
+      - ./keycloak/pap-realm.json:/opt/keycloak/data/import/pap-realm.json:ro
+    ports: ["127.0.0.1:8080:8080"]
 
   # ---------------- gateway (Phase 4, ADR 011) ----------------
   # No published ports: only the api reaches LiteLLM, on the compose network.

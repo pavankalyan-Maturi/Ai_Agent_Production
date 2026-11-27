@@ -23,6 +23,8 @@ jobs:
         with: {context: ., file: deploy/litellm/Dockerfile, load: true, tags: "pap-litellm:dev", cache-from: type=gha, cache-to: "type=gha,mode=max,scope=litellm"}
       - name: Boot core+obs(+llmobs) and assert acceptance
         run: scripts/compose_smoke.sh ${{ (github.event_name != 'workflow_dispatch' || inputs.llmobs) && '--llmobs' || '' }}
+      - name: Keycloak auth profile smoke
+        run: scripts/keycloak_smoke.sh
       - name: Probe latency
         run: |
           pip install -q httpx2==2.16.2

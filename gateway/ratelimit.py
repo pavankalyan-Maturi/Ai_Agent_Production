@@ -79,3 +79,33 @@ class RateLimiter:
             if not last.allowed:
                 return last
         return last
+
+
+class SyncRateLimiter:
+    """Same buckets and Lua script for synchronous callers (the agent graph's model node).
+    Shares key layout with `RateLimiter`, so sync and async callers drain one bucket."""
+
+    def __init__(self, redis: Any, limits: tuple[Limit, ...], prefix: str = "rl") -> None:
+        self._script = redis.register_script(_LUA)
+        self.limits = {lim.name: lim for lim in limits}
+        self.prefix = prefix
+
+    def key(self, tenant: str, caller: str, limit: str) -> str:
+        return f"{self.prefix}:{tenant}:{caller}:{limit}"  # same layout as RateLimiter.key
+
+    def take(self, tenant: str, caller: str, limit: str, cost: int = 1) -> Verdict:
+        lim = self.limits[limit]
+        allowed, wait_ms, left = self._script(
+            keys=[self.key(tenant, caller, limit)], args=[lim.per_minute, lim.refill_per_s, cost]
+        )
+        if int(wait_ms) < 0:
+            return Verdict(False, math.inf, int(left), limit)
+        return Verdict(bool(allowed), int(wait_ms) / 1000.0, int(left), limit)
+
+    def check(self, tenant: str, caller: str, costs: dict[str, int]) -> Verdict:
+        last = Verdict(True, 0.0, 0)
+        for name, cost in costs.items():
+            last = self.take(tenant, caller, name, cost)
+            if not last.allowed:
+                return last
+        return last

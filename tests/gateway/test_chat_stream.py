@@ -102,3 +102,17 @@ async def test_consumer_cancel_closes_upstream_stream(mock_llm_url: str) -> None
             break
         await asyncio.sleep(0.02)
     assert stats["streams_cancelled"] == before + 1
+
+
+def test_semantic_embedder_load_failure_falls_back_to_exact(monkeypatch) -> None:
+    """Compose CI: fastembed is installed but its weights cannot be downloaded."""
+    import retrieval.embedding as emb
+    from apps.api.chat import build_deps
+    from apps.api.settings import Settings
+
+    def boom() -> None:
+        raise ValueError("Could not load model BAAI/bge-small-en-v1.5 from any source.")
+
+    monkeypatch.setattr(emb, "FastEmbedEmbedder", boom)
+    deps = build_deps(Settings(redis_url="redis://127.0.0.1:1/0", cache_semantic=True))()
+    assert deps.cache.embedder is None

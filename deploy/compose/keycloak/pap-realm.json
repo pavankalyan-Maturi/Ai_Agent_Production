@@ -1,0 +1,39 @@
+{
+  "realm": "pap",
+  "enabled": true,
+  "sslRequired": "none",
+  "accessTokenLifespan": 300,
+  "clientScopes": [
+    {"name": "pap:chat", "protocol": "openid-connect", "attributes": {"include.in.token.scope": "true"}},
+    {"name": "pap:ingest", "protocol": "openid-connect", "attributes": {"include.in.token.scope": "true"}},
+    {"name": "pap:admin", "protocol": "openid-connect", "attributes": {"include.in.token.scope": "true"}}
+  ],
+  "clients": [
+    {
+      "clientId": "pap-demo",
+      "name": "dev client for tenant demo (client_credentials only)",
+      "enabled": true,
+      "publicClient": false,
+      "secret": "pap-dev-only-secret",
+      "serviceAccountsEnabled": true,
+      "standardFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "defaultClientScopes": ["pap:chat", "pap:ingest"],
+      "optionalClientScopes": ["pap:admin"],
+      "protocolMappers": [
+        {
+          "name": "aud pap-api",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "config": {"included.custom.audience": "pap-api", "access.token.claim": "true", "id.token.claim": "false"}
+        },
+        {
+          "name": "tenant_id",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-hardcoded-claim-mapper",
+          "config": {"claim.name": "tenant_id", "claim.value": "demo", "jsonType.label": "String", "access.token.claim": "true", "id.token.claim": "false"}
+        }
+      ]
+    }
+  ]
+}

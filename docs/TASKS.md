@@ -40,7 +40,7 @@ Acceptance: DLQ test, filtered-recall test, ablation row per config with CI link
 - P4.4 Locust scenario; p50/p95, cache savings -> RESULTS.md — IN REVIEW (local run; compose run is yours)
 
 ## Phase 5: Guardrails  [CHECKPOINT: security results review]
-- P5.0 OIDC auth (Keycloak RS, scopes, tenant from token) replacing the admin key — IN REVIEW (PR A, ADR 009; Keycloak compose profile NOT ADDED)
+- P5.0 OIDC auth (Keycloak RS, scopes, tenant from token) replacing the admin key — IN REVIEW (PR A, ADR 009; Keycloak compose profile `auth` added in the Phase 4 follow-up PR)
 - P5.1 PII detect/redact in/out — IN REVIEW (PR A)
 - P5.2 injected-doc suite + spotlighting — IN REVIEW (PR A; model ASR from CI eval-security)
 - P5.3 plan/data separation + taint tags — IN REVIEW (PR B, ADR 010)
