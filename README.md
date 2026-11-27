@@ -8,7 +8,7 @@ Every claim here links to a CI run or a row in [docs/RESULTS.md](docs/RESULTS.md
 | 0 | Skeleton: FastAPI, probes, OTel, Prometheus/Grafana/Loki, Langfuse v4, compose, CI | done |
 | 1 | Ingestion (Celery+DLQ), contextual retrieval, hybrid pgvector+FTS, rerank, ablation | done |
 | 2 | LangGraph agent, Postgres checkpointer, budgets, HITL, gated experience memory | done |
-| 3 | Tool governance (mcp-rbac-gateway), MCP 2026-07-28 (stateless) server behind the gateway, A2A v1 card | in progress (A merged, B in review) |
+| 3 | Tool governance (mcp-rbac-gateway), MCP 2026-07-28 (stateless) server behind the gateway, A2A v1 card, tool retrieval | in review (A, B merged; C in review) |
 | 4 | LiteLLM gateway, rate limits, exact+semantic cache, SSE, Locust | todo |
 | 5 | Guardrails: PII, injection suite, plan/data separation, step+trace checks | todo |
 | 6 | Evals, judge calibration, MAST tagging, CI eval gate, GEPA | todo |
@@ -66,6 +66,14 @@ PAP_MCP_JWT_KEY=... uv run uvicorn --factory mcp_server.app:server_app --port 80
 PAP_MCP_APPROVAL_TOKEN=... PAP_MCP_RESEARCHER_TOKEN=... \
   uv run uvicorn --factory mcp_server.app:gateway_app --port 8002
 ```
+
+## A2A
+
+`agent_a2a/` exposes the agent over A2A 1.0 (JSON-RPC). Details are in [ADR 008](docs/adr/008-a2a-and-tool-retrieval.md).
+
+- **The signed card** is at `/.well-known/agent-card.json`. It is signed with JWS ES256, and the public key is at `/.well-known/jwks.json`. Clients should verify it with `agent_a2a.card.verifier_from_jwks(..., trusted_jku=...)`.
+- **`POST /a2a/v1`** runs the agent as the tenant in the caller's JWT (`aud` = that URL, scope `pap:agent`). Callers get the read-only `researcher` role, and tool calls stay governed by sentinel.yaml.
+- **Tool retrieval** (`PAP_TOOL_RETRIEVAL_RAGMCP`, off by default) offers the model only the top-k relevant tools once there are many.
 
 ## Run it
 ```bash

@@ -28,6 +28,7 @@ dependencies = [
   "opentelemetry-semantic-conventions==0.66b2",
   "mcp-rbac-gateway>=0.2.0,<0.3",
   "mcp[cli]==2.3.*",
+  "a2a-sdk[http-server,signing]>=1.1,<2",
 ]
 
 [dependency-groups]

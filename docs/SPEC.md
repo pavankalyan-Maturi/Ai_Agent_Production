@@ -42,7 +42,7 @@ docs/                SPEC, TASKS, handoff, RESULTS, COSTS, adr/, runbooks/
 | S3-compatible store | SeaweedFS 4.01 (MinIO images unavailable, ADR 001) | installed |
 | LangGraph | langgraph==1.2.24, checkpoint==4.3.2, checkpoint-postgres==3.2.1, prebuilt==1.1.3; psycopg 3 | installed (ADR 004) |
 | MCP | spec 2026-07-28 (stateless); `mcp[cli]==2.3.*` (MCPServer) | installed 2.3.0 (ADR 007: was 2.0.*, moved for 5 CVEs) |
-| A2A | spec 1.0; `a2a-sdk>=1.1,<2` | planned P3 |
+| A2A | spec 1.0; `a2a-sdk>=1.1,<2` | installed 1.3.1 (ADR 008) |
 | Tool governance | `mcp-rbac-gateway>=0.2.0,<0.3` (import `mcp_rbac_gateway`), policy `sentinel.yaml` | installed (ADR 006) |
 | LiteLLM proxy | newest stable >=1.97 at Phase 4 after a GHSA check; never 1.107.0; non-root; admin UI off | planned P4 |
 | RabbitMQ / Celery / kombu | rabbitmq 4.2 (`rabbitmq:4.2-management-alpine`, quorum queues) / celery 5.7.x / kombu 5.7.x (ADR 003) | installed |

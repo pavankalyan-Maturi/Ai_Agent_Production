@@ -201,3 +201,43 @@ Tests (`tests/mcp/`) all pass locally: 23 unit tests and 1 integration test agai
 - **Approvals.** The gateway's `/approvals` needs its token, and the gateway refuses to start without one.
 
 **Integration (Postgres)** Real hybrid search through the gateway and server is tenant-scoped: tenant A never sees tenant B's documents.
+
+## Phase 3C: A2A + tool retrieval
+
+### A2A (tests/a2a, 10 tests, all passing locally)
+- **Card verification passes.** The signed card was fetched by the SDK's `A2ACardResolver` and verified with an ES256 key from our JWKS. It has a JSONRPC interface, the `grounded-qa` skill, Bearer JWT security and the `pap:agent` scope.
+- **Bad cards are rejected:**
+  - a tampered interface URL → InvalidSignaturesError
+  - signatures removed → NoSignatureError
+  - a forged key under the same kid → rejected
+  - an untrusted jku → rejected
+  - the JWKS has no private component
+- **SendMessage works end to end.** The SDK client ran the agent as the token's tenant and got a completed task with the cited answer. The governance audit shows `researcher / search / allowed`.
+- **Tasks are isolated per tenant.** Another tenant's `GetTask` on the same id gets "not found".
+- **RPC auth:** no token, a garbage token or an MCP-audience token → 401. The wrong scope → 403. No tool runs in any of these cases.
+
+### Tool-count scaling (`python -m evals.tools.run`, hash embedder, local)
+
+k=5:
+
+| tools | queries | recall@k | spec tokens, all | spec tokens, top-k | select p50 |
+|---|---|---|---|---|---|
+| 10 | 9 | 0.889 | 302 | 153 | 0.03 ms |
+| 25 | 24 | 0.917 | 738 | 146 | 0.04 ms |
+| 50 | 49 | 0.959 | 1499 | 148 | 0.07 ms |
+| 100 | 99 | 0.889 | 2988 | 148 | 0.11 ms |
+| 163 | 162 | 0.642 | 4858 | 145 | 0.17 ms |
+
+k=10:
+
+| tools | queries | recall@k | spec tokens, all | spec tokens, top-k | select p50 |
+|---|---|---|---|---|---|
+| 10 | 9 | 1.000 | 302 | 302 | 0.00 ms |
+| 25 | 24 | 1.000 | 738 | 293 | 0.04 ms |
+| 50 | 49 | 0.980 | 1499 | 294 | 0.07 ms |
+| 100 | 99 | 0.970 | 2988 | 297 | 0.12 ms |
+| 163 | 162 | 0.969 | 4858 | 295 | 0.18 ms |
+
+- **Token counts** are estimates (spec JSON chars / 4), not a tokenizer.
+- **Embedders:** these numbers use a lexical embedder. The fastembed (bge-small) numbers come from CI `eval-tools`; NOT MEASURED here because the sandbox can't download the model.
+- **Not measured:** end-to-end task success with a real model (NOT MEASURED).
