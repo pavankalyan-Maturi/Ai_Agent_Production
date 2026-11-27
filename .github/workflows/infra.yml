@@ -11,7 +11,8 @@ jobs:
     strategy:
       matrix: {dir: [eks, k3s]}
     defaults:
-      run: {working-directory: deploy/terraform/${{ matrix.dir }}}
+      run:
+        working-directory: deploy/terraform/${{ matrix.dir }}
     steps:
       - uses: actions/checkout@v5
       - uses: hashicorp/setup-terraform@v3
