@@ -1,0 +1,69 @@
+name: eval-gate
+# P6.4: the quality gate on the shipped agent config (memory off). Replaces eval-agent on PRs;
+# eval-agent (memory ablation) is now manual. Thresholds and enforcement live in evals/gate.toml.
+on:
+  workflow_dispatch:
+    inputs:
+      max_usd: {description: "Hard cap on new agent API spend", default: "1"}
+  pull_request:
+    paths: ["agent/**", "evals/**", "retrieval/**", ".github/workflows/eval-gate.yml"]
+  # Runs on main seed the response cache (Actions caches are branch-scoped).
+  push:
+    branches: [main]
+    paths: ["agent/**", "evals/**", "retrieval/**", ".github/workflows/eval-gate.yml"]
+permissions: {contents: read}
+concurrency:
+  group: eval-gate-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  gate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    services:
+      postgres:
+        image: pgvector/pgvector:0.8.6-pg17
+        env: {POSTGRES_USER: t, POSTGRES_PASSWORD: t, POSTGRES_DB: t}
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U t" --health-interval 2s --health-retries 30
+    env:
+      FASTEMBED_CACHE_PATH: .cache/fastembed
+      # Fork PRs get no secrets: the gate then reports NOT MEASURED and passes.
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: astral-sh/setup-uv@v7
+        with: {version: "0.11.32", enable-cache: true}
+      - run: uv sync --frozen --python 3.12 --all-groups
+      - name: Cache dataset and models
+        uses: actions/cache@v4
+        with:
+          path: |
+            .cache/hotpot
+            .cache/fastembed
+          key: hotpot-fastembed-v2
+      - name: Restore model responses (content-addressed; unchanged prompts re-run for free)
+        uses: actions/cache/restore@v4
+        with:
+          path: .cache/agent_llm
+          key: agent-llm-${{ github.run_id }}
+          restore-keys: agent-llm-
+      - name: Run shipped config (memory off)
+        run: >-
+          uv run python -m evals.agent.run --dsn postgresql://t:t@localhost:5432/t
+          --questions 100 --arms off --no-gate --max-usd ${{ inputs.max_usd || '1' }}
+      - name: Gate (trajectory, MAST, judge + kappa, paired bootstrap, cost cap)
+        run: uv run python -m evals.gate --judge && cat results/gate/report.md >> "$GITHUB_STEP_SUMMARY"
+      - name: Save model responses
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: .cache/agent_llm
+          key: agent-llm-${{ github.run_id }}
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: eval-gate
+          path: |
+            results/agent
+            results/gate
