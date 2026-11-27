@@ -1,16 +1,11 @@
 name: eval-agent
+# Memory ablation (report). Manual since P6: eval-gate.yml gates the shipped config on PRs
+# and seeds the shared agent-llm- response cache on main.
 on:
   workflow_dispatch:
     inputs:
       questions: {description: "HotpotQA distractor validation questions", default: "100"}
       max_usd: {description: "Hard cap on new API spend for this run", default: "2"}
-  pull_request:
-    paths: ["agent/**", "evals/agent/**", ".github/workflows/eval-agent.yml"]
-  # Runs on main seed the response cache: Actions caches are branch-scoped and a PR can only
-  # restore its own or its base branch's, so without this every PR re-samples every call.
-  push:
-    branches: [main]
-    paths: ["agent/**", "evals/agent/**", ".github/workflows/eval-agent.yml"]
 permissions: {contents: read}
 concurrency:
   group: eval-agent-${{ github.ref }}
@@ -41,7 +36,7 @@ jobs:
           path: |
             .cache/hotpot
             .cache/fastembed
-          key: hotpot-fastembed-v1
+          key: hotpot-fastembed-v2
       - name: Restore model responses (content-addressed; unchanged prompts re-run for free)
         uses: actions/cache/restore@v4
         with:

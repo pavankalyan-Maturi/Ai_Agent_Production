@@ -214,12 +214,14 @@ def arm(
     gate = AdmissionGate(bank, emb) if name == "gated" else None
     recall = Recall(bank, emb, k=RECALL_K, min_sim=RECALL_MIN_SIM) if name != "off" else None
     outs: list[Outcome] = []
+    trajs: list[list[Message]] = []
     seen: list[tuple[Question, Outcome, np.ndarray]] = []
     pool = ThreadPoolExecutor(workers)
     for b in range(0, len(qs), batch):
         chunk = qs[b : b + batch]
         results = list(pool.map(lambda q: run(q, recall), chunk))
         outs += [r[0] for r in results]
+        trajs += [r[1] for r in results]
         if name == "off":
             continue
         seen += [
@@ -258,6 +260,7 @@ def arm(
     pool.shutdown()
     return {
         "outcomes": outs,
+        "messages": trajs,
         "memory": bank.count(TENANT),
         "gate": dict(gate.stats) if gate else {},
     }
@@ -347,6 +350,22 @@ def to_markdown(rows: list[dict[str, Any]], meta: dict[str, Any]) -> str:
 BASELINE_OFF_F1 = 0.501
 
 
+def write_trajectories(path: Path, qs: list[Question], r: dict[str, Any]) -> None:
+    """Shipped-config trajectories for P6 (trajectory metrics, MAST tags, judge, labels)."""
+    with path.open("w") as f:
+        for q, o, msgs in zip(qs, r["outcomes"], r["messages"], strict=True):
+            rec = {
+                "qid": q.id,
+                "question": q.question,
+                "gold": q.answer,
+                "type": q.type,
+                "supporting": list(q.supporting),
+                "outcome": o.__dict__,
+                "messages": [{k: v for k, v in m.items() if k != "raw"} for m in msgs],
+            }
+            f.write(json.dumps(rec, default=str) + "\n")
+
+
 def check_gate(
     rows: list[dict[str, Any]], baseline_f1: float, tol: float
 ) -> tuple[list[str], list[str]]:
@@ -375,9 +394,11 @@ def main() -> None:
     ap.add_argument("--out", type=Path, default=Path("results/agent"))
     ap.add_argument("--gate-tolerance", type=float, default=0.05)
     ap.add_argument("--baseline-f1", type=float, default=BASELINE_OFF_F1)
+    ap.add_argument("--no-gate", action="store_true", help="eval-gate (evals.gate) gates instead")
+    ap.add_argument("--arms", default="off,on,gated", help="eval-gate runs only the shipped 'off'")
     a = ap.parse_args()
     a.out.mkdir(parents=True, exist_ok=True)
-    arms = ["off", "on", "gated"]
+    arms = a.arms.split(",")
 
     if not os.environ.get("ANTHROPIC_API_KEY"):
         skipped = [{"arm": n, "not_measured": "no ANTHROPIC_API_KEY"} for n in arms]
@@ -442,8 +463,12 @@ def main() -> None:
             indent=1,
         )
     )
+    if "off" in results:
+        write_trajectories(a.out / "trajectories.jsonl", qs, results["off"])
     print(md)
 
+    if a.no_gate:
+        return
     failures, notes = check_gate(rows, a.baseline_f1, a.gate_tolerance)
     for n in notes:
         print(f"EVAL NOTE: {n}", file=sys.stderr)

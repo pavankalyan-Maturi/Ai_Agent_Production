@@ -29,6 +29,7 @@ class Question:
     answer: str
     type: str  # bridge | comparison
     paragraphs: tuple[tuple[str, str], ...]  # (title, text)
+    supporting: tuple[str, ...] = ()  # gold supporting-paragraph titles (trajectory evals)
 
 
 def _get(url: str, timeout: float = 60) -> Any:
@@ -43,12 +44,14 @@ def parse_hf_row(row: dict[str, Any]) -> Question:
     paras = tuple(
         (t, "".join(s).strip()) for t, s in zip(ctx["title"], ctx["sentences"], strict=True)
     )
-    return Question(row["id"], row["question"], row["answer"], row.get("type", ""), paras)
+    sup = tuple(dict.fromkeys(row.get("supporting_facts", {}).get("title", [])))
+    return Question(row["id"], row["question"], row["answer"], row.get("type", ""), paras, sup)
 
 
 def parse_cmu_row(row: dict[str, Any]) -> Question:
     paras = tuple((t, "".join(s).strip()) for t, s in row["context"])
-    return Question(row["_id"], row["question"], row["answer"], row.get("type", ""), paras)
+    sup = tuple(dict.fromkeys(t for t, _ in row.get("supporting_facts", [])))
+    return Question(row["_id"], row["question"], row["answer"], row.get("type", ""), paras, sup)
 
 
 def _from_hf(n: int) -> list[Question]:
@@ -77,10 +80,16 @@ def _from_hf(n: int) -> list[Question]:
 
 
 def load(n: int, cache: Path) -> list[Question]:
-    path = cache / f"hotpot_distractor_val_{n}.json"
+    path = cache / f"hotpot_distractor_val_{n}_v2.json"  # v2: + supporting titles
     if path.exists():
         return [
-            Question(**{**r, "paragraphs": tuple(map(tuple, r["paragraphs"]))})
+            Question(
+                **{
+                    **r,
+                    "paragraphs": tuple(map(tuple, r["paragraphs"])),
+                    "supporting": tuple(r.get("supporting", ())),
+                }
+            )
             for r in json.loads(path.read_text())
         ]
     try:
