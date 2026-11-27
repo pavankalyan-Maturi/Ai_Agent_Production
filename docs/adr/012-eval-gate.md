@@ -1,6 +1,6 @@
 # ADR 012: Eval gate: per-question paired bootstrap on the shipped config, judge gated by kappa (Phase 6)
 
-Status: proposed (Phase 6 PR A). Thresholds in `evals/gate.toml` await human sign-off.
+Status: accepted. Thresholds signed off 2026-11-27: f1, judge_correct (kappa 0.827) and cost cap enforced.
 
 ## Context
 Until now each eval workflow carried its own pass/fail rule; eval-agent compared one mean F1
@@ -30,8 +30,8 @@ only trusts an LLM judge after it agrees with a human.
    `evals/labels/hotpot_correctness.csv` is ≥ 0.6. The F1 ≥ 0.5 rule is scored against the same
    labels, so the judge has to beat the lexical baseline to be worth its cost.
 6. **Cost cap**: new spend of agent run + judge ≤ $0.30 per run, enforced (agent $0.25, judge $0.05; the user's API balance is low).
-7. **Enforcement** per metric in `gate.toml`. Today: F1 and the cost cap enforced; judge,
-   evidence recall, redundant calls and $/question report-only until sign-off.
+7. **Enforcement** per metric in `gate.toml`: F1, judge accuracy and the cost cap block a PR;
+   evidence recall, redundant calls and $/question are report-only (no history yet).
 
 ## Alternatives
 - *Fixed tolerance on the mean* (old rule): no notion of variance; with n=100 a ±0.05 band is
