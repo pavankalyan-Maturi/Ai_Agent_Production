@@ -49,7 +49,7 @@ docs/                SPEC, TASKS, handoff, RESULTS, COSTS, adr/, runbooks/
 | RabbitMQ / Celery / kombu | rabbitmq 4.2 (`rabbitmq:4.2-management-alpine`, quorum queues) / celery 5.7.x / kombu 5.7.x (ADR 003) | installed |
 | S3 client | boto3 1.44.x; tests: moto 5.2.x server mode | installed |
 | Keycloak | `quay.io/keycloak/keycloak:26.4.2`, compose profile `auth`, dev mode (ADR 009) | compose |
-| vLLM | 0.34.0 (Phase 7, human-run) | planned P7 |
+| vLLM | 0.34.0 (Phase 7, human-run), Llama-3.1-8B-Instruct + EAGLE-3 head | ADR 013 |
 
 ## Models (Claude via LiteLLM; one place to change)
 - Default generation: `claude-sonnet-5-5`. Cheap bulk work (contextual chunk headers, judges after calibration): `claude-haiku-5-5`.

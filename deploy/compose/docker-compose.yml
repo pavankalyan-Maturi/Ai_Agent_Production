@@ -156,6 +156,8 @@ services:
       LITELLM_MASTER_KEY: ${LITELLM_MASTER_KEY:-sk-pap-dev-only}
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
       MOCK_LLM_BASE: http://mock-llm:8010/v1
+      VLLM_API_BASE: ${VLLM_API_BASE:-http://mock-llm:8010/v1}  # GPU box: see docs/runbooks/vllm.md
+      VLLM_API_KEY: ${VLLM_API_KEY:-none}
     depends_on: [mock-llm]
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request as u; u.urlopen('http://127.0.0.1:4000/health/liveliness')"]

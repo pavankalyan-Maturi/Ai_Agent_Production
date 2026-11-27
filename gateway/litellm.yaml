@@ -6,7 +6,11 @@ model_list:
     litellm_params: {model: anthropic/claude-sonnet-5-5, api_key: os.environ/ANTHROPIC_API_KEY}
   - model_name: agent-fast
     litellm_params: {model: anthropic/claude-haiku-5-5, api_key: os.environ/ANTHROPIC_API_KEY}
-  # Mock upstream (gateway/mock_llm.py) standing in for vLLM until Phase 7.
+  # Self-hosted vLLM (ADR 013). Compose points VLLM_API_BASE at the mock until a GPU box exists.
+  - model_name: local-vllm
+    litellm_params: {model: hosted_vllm/local-llm, api_base: os.environ/VLLM_API_BASE,
+                     api_key: os.environ/VLLM_API_KEY}
+  # Mock upstream (gateway/mock_llm.py) for CI and load tests.
   - model_name: mock
     litellm_params: {model: openai/mock, api_base: os.environ/MOCK_LLM_BASE, api_key: none}
   - model_name: mock-flaky
@@ -19,6 +23,7 @@ router_settings:
   timeout: 60
   fallbacks:
     - agent-default: [agent-fast]
+    - local-vllm: [agent-fast]  # GPU box down -> paid Haiku; drop this line to fail closed
     - mock-flaky: [mock]
 
 litellm_settings:

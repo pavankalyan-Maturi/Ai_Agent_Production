@@ -54,7 +54,7 @@ Acceptance: DLQ test, filtered-recall test, ablation row per config with CI link
 - P6.5 GEPA vs MIPROv2 on synthesis module — CUT (user decision 2026-11-27, SPEC cut list #2; ADR 012)
 
 ## Phase 7: vLLM (human-run)  [CHECKPOINT: before renting GPU]
-- P7.1 serving/ configs + bench scripts; P7.2 runbook (RunPod L40S/H100), cost estimate, teardown; P7.3 human runs, logs -> RESULTS.md
+- P7.1 serving/ configs + bench scripts [DONE, PR]; P7.2 runbook (RunPod L40S/H100), cost estimate, teardown [DONE, PR: docs/runbooks/vllm.md]; P7.3 human runs, logs -> RESULTS.md [OPEN, human]
 
 ## Phase 8: Cloud burst (human-run)  [CHECKPOINT: before terraform apply]
 - P8.1 terraform (EKS, 1 AZ) + k3s-on-EC2 alternative; terraform validate + tflint in CI
