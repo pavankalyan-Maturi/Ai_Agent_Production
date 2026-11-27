@@ -99,3 +99,55 @@ def test_serve_env_matches_spec_pin() -> None:
     assert env["VLLM_IMAGE"] == "vllm/vllm-openai:v0.34.0"
     assert env["SERVED_NAME"] == "local-llm"
     assert "| vLLM | 0.34.0" in (ROOT / "docs/SPEC.md").read_text()
+
+
+def _fake_vllm(tmp_path: Path, exit_code: int) -> dict[str, str]:
+    import os
+
+    fake = tmp_path / "vllm"
+    fake.write_text(f'#!/bin/sh\necho "vllm $@"\nexit {exit_code}\n')
+    fake.chmod(0o755)
+    return {
+        **os.environ,
+        "PATH": f"{tmp_path}:{os.environ['PATH']}",
+        "HF_TOKEN": "x",
+        "VLLM_API_KEY": "y",
+        "VLLM_RUNNER": "native",
+    }
+
+
+def test_serve_sh_native_args_match_vllm_034(tmp_path: Path) -> None:
+    import subprocess
+
+    out = subprocess.run(  # noqa: S603 - fixed repo script, fake vllm
+        [str(ROOT / "serving/serve.sh"), "prefix+eagle3"],
+        env=_fake_vllm(tmp_path, 0),
+        capture_output=True,
+        text=True,
+        check=True,
+    ).stdout
+    assert out.startswith("vllm serve --model meta-llama/Llama-3.1-8B-Instruct")
+    assert "--enable-prefix-caching" in out and '"method":"eagle3"' in out
+    assert "--disable-log-requests" not in out  # removed in vLLM 0.34: server would not start
+
+
+def test_run_all_marks_dead_arm_and_moves_on(tmp_path: Path) -> None:
+    import shutil
+    import subprocess
+
+    repo = tmp_path / "repo"
+    shutil.copytree(ROOT / "serving", repo / "serving")
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    env = {**_fake_vllm(bin_dir, 1), "ARM_GAP_S": "0"}
+    proc = subprocess.run(  # noqa: S603 - fixed repo script, fake vllm
+        [str(repo / "serving/run_all.sh"), "baseline", "eagle3"],
+        env=env,
+        capture_output=True,
+        text=True,
+        timeout=60,
+    )
+    assert proc.stdout.count("DID NOT RUN") == 2
+    for arm in ("baseline", "eagle3"):
+        data = json.loads((repo / f"serving/results/{arm}.json").read_text())
+        assert data == {"arm": arm, "did_not_run": True}

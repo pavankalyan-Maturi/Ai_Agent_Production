@@ -1,5 +1,15 @@
 # Handoff
 
+## Latest: P7.2 runbook fix (before the first GPU run)
+- `serving/serve.sh`: dropped `--disable-log-requests` (removed in vLLM 0.34, checked against
+  v0.34.0 `arg_utils.py`; every arm would have failed at startup). Runs `vllm serve` natively when
+  there is no Docker (RunPod pods are containers), `VLLM_RUNNER=docker|native` to force.
+- `serving/run_all.sh`: the four-arm loop as one script; a dead or slow-to-start arm is written as
+  `did_not_run` instead of hanging the old `until curl` loop. Runbook step 1-3 updated.
+- Verified here: gate green, 180 passed (2 new tests with a fake `vllm`). Happy path of
+  `run_all.sh` against a real server: UNVERIFIED (needs the GPU).
+- Next: user runs docs/runbooks/vllm.md on an L40S (P7.3).
+
 ## Done
 - Phases 0-6 and Phase 4 follow-ups merged (PR #1-#18).
 - Phase 7 P7.1 + P7.2 (this PR):
