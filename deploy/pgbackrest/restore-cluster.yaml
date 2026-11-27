@@ -1,0 +1,42 @@
+# Restore target for the drill: a new cluster bootstrapped from pap-db's repo1 on S3.
+# ${...} is filled by restore_drill.sh. Deleted at the end of the drill.
+apiVersion: postgres-operator.crunchydata.com/v1beta1
+kind: PostgresCluster
+metadata:
+  name: pap-db-restore
+  namespace: pap
+spec:
+  postgresVersion: 17
+  dataSource:
+    pgbackrest:
+      stanza: db
+      global:
+        repo1-path: /pgbackrest/pap-db/repo1
+        repo1-s3-key-type: web-id
+      repo:
+        name: repo1
+        s3:
+          bucket: ${PGBACKREST_BUCKET}
+          endpoint: s3.${AWS_REGION}.amazonaws.com
+          region: ${AWS_REGION}
+  instances:
+    - name: instance1
+      replicas: 1
+      dataVolumeClaimSpec:
+        accessModes: [ReadWriteOnce]
+        resources:
+          requests: {storage: 10Gi}
+  backups:
+    pgbackrest:
+      metadata:
+        annotations:
+          eks.amazonaws.com/role-arn: ${PGBACKREST_ROLE_ARN}
+      global:
+        repo1-path: /pgbackrest/pap-db-restore/repo1
+        repo1-s3-key-type: web-id
+      repos:
+        - name: repo1
+          s3:
+            bucket: ${PGBACKREST_BUCKET}
+            endpoint: s3.${AWS_REGION}.amazonaws.com
+            region: ${AWS_REGION}

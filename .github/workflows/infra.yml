@@ -1,0 +1,35 @@
+# Phase 8: static checks only. Nothing here has AWS credentials or calls AWS (ADR 014).
+name: infra
+on:
+  pull_request:
+    paths: [deploy/terraform/**, deploy/helm/**, deploy/argocd/**, deploy/chaos/**, deploy/pgbackrest/**, scripts/burst_*.sh, .github/workflows/infra.yml]
+  workflow_dispatch:
+permissions: {contents: read}
+jobs:
+  terraform:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix: {dir: [eks, k3s]}
+    defaults:
+      run: {working-directory: deploy/terraform/${{ matrix.dir }}}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: hashicorp/setup-terraform@v3
+        with: {terraform_version: 1.13.4}
+      - run: terraform fmt -check -recursive
+      - run: terraform init -backend=false -input=false
+      - run: terraform validate
+      - uses: terraform-linters/setup-tflint@v4
+        with: {tflint_version: v0.59.1}
+      - run: tflint --init && tflint --format compact
+
+  manifests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: azure/setup-helm@v4
+        with: {version: v3.19.0}
+      - name: kubeconform
+        run: |
+          curl -sSfL https://github.com/yannh/kubeconform/releases/download/v0.7.0/kubeconform-linux-amd64.tar.gz | tar xz kubeconform
+          scripts/check_manifests.sh ./kubeconform

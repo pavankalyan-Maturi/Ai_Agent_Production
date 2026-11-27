@@ -50,6 +50,8 @@ docs/                SPEC, TASKS, handoff, RESULTS, COSTS, adr/, runbooks/
 | S3 client | boto3 1.44.x; tests: moto 5.2.x server mode | installed |
 | Keycloak | `quay.io/keycloak/keycloak:26.4.2`, compose profile `auth`, dev mode (ADR 009) | compose |
 | vLLM | 0.34.0 (Phase 7, human-run), Llama-3.1-8B-Instruct + EAGLE-3 head | ADR 013 |
+| Burst IaC | Terraform 1.13.4, hashicorp/aws 6.20.0, EKS 1.34 (standard support), k3s v1.34.1+k3s1 | code only (ADR 014) |
+| Burst add-ons | LBC chart 3.2.0, metrics-server 3.13.0, KEDA 2.18.1, Argo CD chart 9.1.0, Chaos Mesh 2.7.3, Crunchy PGO 5.8.2 (UNVERIFIED) | code only (ADR 014) |
 
 ## Models (Claude via LiteLLM; one place to change)
 - Default generation: `claude-sonnet-5-5`. Cheap bulk work (contextual chunk headers, judges after calibration): `claude-haiku-5-5`.

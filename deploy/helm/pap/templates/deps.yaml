@@ -1,0 +1,59 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pap-redis
+  labels: {{- include "pap.labels" . | nindent 4 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels: {app.kubernetes.io/name: pap-redis}
+  template:
+    metadata:
+      labels: {app.kubernetes.io/name: pap-redis}
+    spec:
+      containers:
+        - name: redis
+          image: {{ .Values.redis.image }}
+          args: ["--save", "", "--appendonly", "no"]  # cache only, no persistence
+          ports: [{containerPort: 6379}]
+          resources:
+            requests: {cpu: 50m, memory: 64Mi}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: pap-redis
+spec:
+  selector: {app.kubernetes.io/name: pap-redis}
+  ports: [{port: 6379}]
+{{- if .Values.mockLlm.enabled }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pap-mock-llm
+  labels: {{- include "pap.labels" . | nindent 4 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels: {app.kubernetes.io/name: pap-mock-llm}
+  template:
+    metadata:
+      labels: {app.kubernetes.io/name: pap-mock-llm}
+    spec:
+      containers:
+        - name: mock-llm
+          image: {{ include "pap.image" . }}
+          command: ["uvicorn", "gateway.mock_llm:app", "--host", "0.0.0.0", "--port", "8010"]
+          ports: [{containerPort: 8010}]
+          resources:
+            requests: {cpu: 50m, memory: 256Mi}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: pap-mock-llm
+spec:
+  selector: {app.kubernetes.io/name: pap-mock-llm}
+  ports: [{port: 8010}]
+{{- end }}

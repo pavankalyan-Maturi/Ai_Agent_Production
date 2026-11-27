@@ -57,6 +57,6 @@ Acceptance: DLQ test, filtered-recall test, ablation row per config with CI link
 - P7.1 serving/ configs + bench scripts [DONE, PR]; P7.2 runbook (RunPod L40S/H100), cost estimate, teardown [DONE, PR: docs/runbooks/vllm.md]; P7.3 human runs, logs -> RESULTS.md [OPEN, human]
 
 ## Phase 8: Cloud burst (human-run)  [CHECKPOINT: before terraform apply]
-- P8.1 terraform (EKS, 1 AZ) + k3s-on-EC2 alternative; terraform validate + tflint in CI
-- P8.2 Helm, Argo CD app, KEDA scaler, Chaos Mesh experiment, pgBackRest restore drill runbook
-- P8.3 destroy script + bill check; human runs; evidence committed
+- P8.1 terraform (EKS, 1 AZ) + k3s-on-EC2 alternative; terraform validate + tflint in CI [DONE, PR; not applied]
+- P8.2 Helm, Argo CD app, KEDA scaler, Chaos Mesh experiment, pgBackRest restore drill runbook [DONE, PR: docs/runbooks/aws-burst.md]
+- P8.3 destroy script + bill check [DONE, PR]; human runs; evidence committed [OPEN, human, needs AWS budget]

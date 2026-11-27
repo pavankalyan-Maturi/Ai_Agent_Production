@@ -1,0 +1,19 @@
+# The one Chaos Mesh experiment (SPEC non-goal: more than one). Kills one api pod every 60s
+# for 10 minutes while Locust runs. Pass: Locust failure ratio < 1% and p95 within 2x baseline.
+apiVersion: chaos-mesh.org/v1alpha1
+kind: Schedule
+metadata:
+  name: pap-api-pod-kill
+  namespace: pap
+spec:
+  schedule: "@every 60s"
+  type: PodChaos
+  historyLimit: 10
+  concurrencyPolicy: Forbid
+  podChaos:
+    action: pod-kill
+    mode: one
+    selector:
+      namespaces: [pap]
+      labelSelectors:
+        app.kubernetes.io/name: pap-api

@@ -1,6 +1,23 @@
 # Handoff
 
-## Latest: P7.2 runbook fix (before the first GPU run)
+## Latest: Phase 8 (P8.1-P8.3 code) AWS burst as code + runbook, nothing applied
+- `deploy/terraform/eks`: VPC (public subnets, no NAT), EKS 1.34 standard support, spot node group
+  (1 AZ), EBS CSI + core add-ons, IRSA (EBS CSI, LBC, pgBackRest), S3 pgBackRest repo, ECR,
+  Secrets Manager container, AWS Budget. `deploy/terraform/k3s`: one spot EC2 k3s node, 10 h
+  self-terminate.
+- `deploy/helm/pap`: api (probes, PDB, non-root), mock LLM, Redis, KEDA ScaledObject (CPU),
+  ALB Ingress (EKS values), Crunchy PGO PostgresCluster (pgvector, PgBouncer, pgBackRest on S3).
+- `deploy/argocd/application.yaml`, `deploy/chaos/pod-kill.yaml`, `deploy/pgbackrest/`
+  (restore cluster + `restore_drill.sh` writing RTO JSON).
+- `scripts/burst_up.sh`, `scripts/burst_destroy.sh` (ALB/EBS first, terraform destroy, leftover and
+  bill check), `scripts/check_manifests.sh`; CI `infra.yml` (fmt, validate, tflint, helm lint,
+  kubeconform). Runbook `docs/runbooks/aws-burst.md` with cost estimate and cost-guard checklist.
+  ADR 014, SPEC pin rows.
+- Verified here: terraform fmt/validate + tflint clean (both modules), helm lint/template,
+  kubeconform -strict 26/26 resources, bash -n, gate green (see PR). NOT run: anything on AWS.
+- Next: when there is budget, user runs docs/runbooks/aws-burst.md and pastes evidence (P8.3).
+
+## Previous: P7.2 runbook fix (before the first GPU run)
 - `serving/serve.sh`: dropped `--disable-log-requests` (removed in vLLM 0.34, checked against
   v0.34.0 `arg_utils.py`; every arm would have failed at startup). Runs `vllm serve` natively when
   there is no Docker (RunPod pods are containers), `VLLM_RUNNER=docker|native` to force.
@@ -34,13 +51,16 @@
 - RunPod prices in the runbook are estimates.
 
 ## Open
+- P8.3 (human): AWS burst run + evidence; needs ~$2-5 of AWS.
 - P7.3 (human): follow docs/runbooks/vllm.md, commit serving/results, fill RESULTS.md table.
 - Carried over: evals use AnthropicModel directly (opt-in GatewayModel); approvals API approver
   from body + untenanted pending approvals (ADR 009, library <0.3); gate covers agent eval only.
 
 ## Next step
-User runs P7.3 on a rented GPU. Phase 8 only when the user says so.
+Phases 1-8 have code. Human-run items left: P7.3 (GPU) and P8.3 (AWS), both waiting on budget.
 
 ## Versions pinned
+Phase 8 (ADR 014): Terraform 1.13.4, aws provider 6.20.0, EKS 1.34, k3s v1.34.1+k3s1, LBC 3.2.0,
+metrics-server 3.13.0, KEDA 2.18.1, Argo CD chart 9.1.0, Chaos Mesh 2.7.3, PGO 5.8.2 (UNVERIFIED).
 vLLM 0.34.0 image `vllm/vllm-openai:v0.34.0`, model Llama-3.1-8B-Instruct, draft
 `yuhuili/EAGLE3-LLaMA3.1-Instruct-8B` (ADR 013, SPEC row). Others unchanged.
