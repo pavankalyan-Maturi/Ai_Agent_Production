@@ -6,6 +6,11 @@ on:
       max_usd: {description: "Hard cap on new API spend for this run", default: "2"}
   pull_request:
     paths: ["agent/**", "evals/agent/**", ".github/workflows/eval-agent.yml"]
+  # Runs on main seed the response cache: Actions caches are branch-scoped and a PR can only
+  # restore its own or its base branch's, so without this every PR re-samples every call.
+  push:
+    branches: [main]
+    paths: ["agent/**", "evals/agent/**", ".github/workflows/eval-agent.yml"]
 permissions: {contents: read}
 concurrency:
   group: eval-agent-${{ github.ref }}
@@ -37,8 +42,8 @@ jobs:
             .cache/hotpot
             .cache/fastembed
           key: hotpot-fastembed-v1
-      - name: Cache model responses (content-addressed; unchanged code re-runs for free)
-        uses: actions/cache@v4
+      - name: Restore model responses (content-addressed; unchanged prompts re-run for free)
+        uses: actions/cache/restore@v4
         with:
           path: .cache/agent_llm
           key: agent-llm-${{ github.run_id }}
@@ -49,6 +54,14 @@ jobs:
           --dsn postgresql://t:t@localhost:5432/t
           --questions ${{ inputs.questions || '100' }}
           --max-usd ${{ inputs.max_usd || '2' }}
+      # Saved even when the gate fails: the answers were paid for and are keyed by prompt, so a
+      # re-run reproduces the same result instead of re-rolling it (and re-paying).
+      - name: Save model responses
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: .cache/agent_llm
+          key: agent-llm-${{ github.run_id }}
       - uses: actions/upload-artifact@v4
         if: always()
         with: {name: agent-ablation, path: results/agent}

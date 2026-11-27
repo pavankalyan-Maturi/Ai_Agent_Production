@@ -61,4 +61,4 @@ Status: accepted. Date: 2026-11-27.
 **Default:** off.
 - With few tools (we have 3–4 today), the selector returns them unchanged.
 - Turn it on with k≈10 once a tenant has dozens of tools.
-- Revisit k with the fastembed numbers from CI.
+- CI fastembed numbers (RESULTS 3C): recall@5 is 0.963 and recall@10 is 0.994 at 163 tools, so k=5 is enough with a semantic embedder.

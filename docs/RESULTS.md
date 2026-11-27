@@ -239,5 +239,17 @@ k=10:
 | 163 | 162 | 0.969 | 4858 | 295 | 0.18 ms |
 
 - **Token counts** are estimates (spec JSON chars / 4), not a tokenizer.
-- **Embedders:** these numbers use a lexical embedder. The fastembed (bge-small) numbers come from CI `eval-tools`; NOT MEASURED here because the sandbox can't download the model.
+- **Embedders:** the tables above use the lexical hash embedder (local). CI `eval-tools` repeated the run with fastembed BAAI/bge-small-en-v1.5 (PR #8, run 45922320083):
+
+| tools | recall@5 | recall@10 | spec tokens, all | top-5 | top-10 | select p50 |
+|---|---|---|---|---|---|---|
+| 10 | 1.000 | 1.000 | 302 | 152 | 302 | 6.6 ms |
+| 25 | 0.958 | 0.958 | 738 | 150 | 299 | 6.8 ms |
+| 50 | 0.980 | 0.980 | 1499 | 151 | 302 | 6.6 ms |
+| 100 | 0.980 | 0.990 | 2988 | 148 | 300 | 10.1 ms |
+| 163 | 0.963 | 0.994 | 4858 | 145 | 298 | 7.0 ms |
+
+  The semantic embedder removes most of the near-duplicate failures that the lexical one has at k=5. Query embedding takes about 7 ms on CPU.
+
+**HotpotQA (eval-agent) on PR #8, first run:** off 0.487 / on 0.432 / gated 0.403 F1. The gate failed (gated −0.084, 95% CI [−0.139, −0.034]). That run made 933 fresh Haiku calls ($0.19) because the response cache was not reachable from a new PR. The memory path was not changed in this PR; the memory arms are noisy across fresh samples (PR #5 run 2: gated −0.035). The fix is that main now seeds the cache and red runs save it, so unchanged prompts reproduce instead of re-rolling.
 - **Not measured:** end-to-end task success with a real model (NOT MEASURED).
