@@ -1,31 +1,34 @@
 # Handoff
 
 ## Done
-- Phases 0-3 merged (PR #1-#8). Phase 4 (gateway) NOT built: the user chose Phase 5 first.
-- Phase 5 PR A (this PR, not merged), ADR 009:
-  - **P5.0 auth** (`apps/api/auth.py`): OIDC resource server. JWKS or a static key; `iss`, `aud`, `exp`, `sub`, `tenant_id` required.
-    - `pap:admin` guards `/api/v1/security/*`, and `pap:ingest` guards `/v1/ingest`. Tenant from the token only.
-    - The admin key and the `X-Tenant-Id` header are removed. With no key configured the routes answer 503.
-  - **P5.1** `guardrails/pii.py`: the question is redacted before the model, memory or a checkpoint; the answer is redacted on the way out. Uses the library's Scanner.
-  - **P5.2** `guardrails/spotlight.py`: delimiting for `search`/`fetch_doc` output, opt-in via `build_graph(guardrails=...)`.
-    - Injected-doc suite `evals/security/` (40 attacks in 8 families, 20 benign). CI `eval-security` runs Haiku ASR per arm.
-  - `guardrails` added to mypy (CI + CLAUDE.md gate) and to the Dockerfile.
+- Phases 0-3 merged (PR #1-#8). Phase 5 PR A merged (PR #9, ADR 009). Phase 4 (gateway) not built.
+- Phase 5 PR B (this PR, not merged), ADR 010:
+  - **P5.3** `guardrails/taint.py`: taint ledger rebuilt from the transcript; plan/data separation
+    (`Guardrails(quarantine=model)`): data-tool output becomes `$vN`, the planner sees handles,
+    `extract` runs a tool-less reader with typed validation (number/date/name/text); variables are
+    filled into tool args and the answer after the plan is fixed.
+  - **P5.4** `guardrails/policy.py`: step rules (taint_to_sink, tainted_var_to_sink) and trace rules
+    (sink_without_intent, sink_budget, denial_limit), checked in `plan` before the approval pause;
+    denials audited through mcp-rbac-gateway's audit log (`approver=policy:<rule>`).
+  - Suite: +10 benign_action cases (70 total); arms `policy` and `camel`; scripted worst-case run.
+  - PR A's Haiku ASR recorded in RESULTS (38% / 25% / 18%).
 
 ## Verified here
-- Gate: ruff, format, mypy, 139 unit tests (16 new: auth, guardrails, eval harness).
-- Offline security eval: the scanner detects 25% of the 40 injected docs (direct_override and fake_markup only), with 0/20 false blocks. Governed call p50 1.47 ms.
+- Gate: ruff, format, mypy, 145 unit tests (7 new).
+- Scripted worst case: policy exfil ASR 100% -> 0%, answer ASR unchanged (100%); camel 0% ASR;
+  0/30 false blocks; policy check p50 0.014 ms.
 
 ## Not verified
-- Haiku ASR per arm (CI `eval-security`, < $0.10).
-- Keycloak itself: no compose profile yet. Tokens in tests are minted locally (RS256).
+- Haiku 5.5 on the `policy` and `camel` arms (ASR, benign accuracy, false blocks): CI
+  `eval-security` job summary, cap $1 (expected ~$0.1-0.2).
 
 ## Open
-- PR B: P5.3 plan/data separation + taint tags (CaMeL-lite) and P5.4 step-level + trace-level checks, with false-block and latency numbers.
-- Keycloak compose profile (dev realm, `tenant_id` mapper). Approvals: the approver comes from the token, not the body, and the pending list is tenant-filtered (library broker is global).
-- Merge mcp_server's JwtVerifier into apps/api/auth. Phase 4 gateway. HotpotQA memory gate red on main (separate task).
+- Move sink definitions into sentinel.yaml when the library has a place for them.
+- Keycloak compose profile; approver from token + tenant-filtered approvals; merge JwtVerifiers.
+- Phase 4 gateway. HotpotQA memory gate red on main (separate task).
 
 ## Next step
-Review PR A. Then PR B in a fresh thread.
+Review PR B and the eval-security numbers. Then Phase 4 or the memory-gate fix, in a fresh thread.
 
 ## Versions pinned
-docs/SPEC.md Pins table, ADR 002-009 (PyJWT 2.15.1, mcp-rbac-gateway 0.2.0).
+docs/SPEC.md Pins table, ADR 002-010 (no new dependencies in PR B).

@@ -10,6 +10,9 @@ Optional parts (each off unless passed):
 - compaction (P2.4): cap tool results; summarise old observations once the view is too big.
 - recall (P2.5): experience-memory items added to the system prompt at start.
 - verifiers (P2.6): external checks on a final answer; a failure triggers one grounded retry.
+- guardrails (Phase 5): PII at the edges and spotlighting (ADR 009); the tool-call policy and
+  plan/data separation with taint (ADR 010). Policy verdicts are made in `plan`, before the
+  approval pause, so a human never reviews a call the policy already refuses.
 
 Budgets are checked before every model call, so a run never starts a call it cannot pay for
 beyond one step's worth. degrade answers from the observations so far without calling the model.
@@ -44,7 +47,8 @@ from agent.telemetry import TENANT, ga, provider_for
 from agent.telemetry import tracer as default_tracer
 from agent.tool_retrieval import ToolSelector
 from agent.tools import Tool
-from guardrails import RULE, Guardrails, spotlight
+from guardrails import RULE, Guardrails, Ledger, spotlight
+from guardrails.taint import EXTRACT, PLAN_RULE, QUARANTINE, handle, substitute, validate
 
 Recaller = Callable[[str, str], list[MemoryItem]]  # (tenant_id, question) -> items
 
@@ -77,7 +81,16 @@ def build_graph(
     by_name: Mapping[str, Tool] = {t.spec.name: t for t in tools}
     specs = [t.spec for t in tools]
 
+    policy = guardrails.policy if guardrails else None
+    quarantine = guardrails.quarantine if guardrails else None
+    untrusted = guardrails.untrusted_tools if guardrails else frozenset()
+
+    def denied(state: AgentState) -> dict[str, str]:
+        return dict(state["messages"][-1].get("denied") or {})
+
     def needs_human(state: AgentState, c: dict[str, Any]) -> bool:
+        if c["id"] in denied(state):
+            return False
         tool = by_name.get(c["name"])
         if tool is None:
             return False
@@ -94,6 +107,8 @@ def build_graph(
             if governance is None
             else [t.spec for t in governance.visible(state.get("role"), list(tools))]
         )
+        if quarantine is not None:
+            visible = [*visible, EXTRACT]
         if tool_selector is None:
             return visible
         used = [
@@ -113,6 +128,8 @@ def build_graph(
             question, redacted = red.text, list(red.detectors)
         if guardrails and guardrails.spotlight_tools:
             system = f"{SYSTEM}\n\n{RULE}"
+        if quarantine is not None:
+            system = f"{system}\n\n{PLAN_RULE}"
         if recall is not None:
             items = recall(state["tenant_id"], question)
             if items:
@@ -130,6 +147,7 @@ def build_graph(
             "reflections": 0,
             "summary": "",
             "compacted_upto": 0,
+            "variables": {},
             "steps": 0,
             "tokens": 0,
             "usd": 0.0,
@@ -175,8 +193,41 @@ def build_graph(
             "compacted_upto": upto,
             "summary": summary,
         }
+        if policy is not None and d.tool_calls:
+            done = [m for m in msgs if m["role"] == "assistant"]
+            prior = sum(
+                1
+                for m in done
+                for c in m.get("tool_calls") or []
+                if c["name"] in policy.sinks and c["id"] not in (m.get("denied") or {})
+            )
+            variables = state.get("variables", {})
+            verdicts = policy.check_calls(
+                msg["tool_calls"],
+                question=state["question"],
+                ledger=Ledger.from_transcript(msgs, untrusted, variables),
+                variables=variables,
+                prior_sink_calls=prior,
+            )
+            if verdicts:
+                msg["denied"] = {k: v.rule for k, v in verdicts.items()}
+                events = [
+                    {"call_id": c["id"], "tool": c["name"], "rule": verdicts[c["id"]].rule}
+                    for c in msg["tool_calls"]
+                    if c["id"] in verdicts
+                ]
+                out["policy_events"] = events
+                total = len(events) + sum(len(m.get("denied") or {}) for m in done)
+                if total >= policy.max_denials:  # trace-level stop: persistent injection
+                    msg.pop("denied", None)
+                    msg |= {"tool_calls": [], "raw": None, "content": ""}
+                    stop = f"[stopped: tool-call policy denied {total} call(s)]"
+                    out |= {"status": "done", "stop_reason": "policy", "answer": stop}
+                    return out
         if d.final:
             answer = d.text
+            if quarantine is not None:  # P5.3: values are filled in after the plan is fixed
+                answer, _ = substitute(answer, state.get("variables", {}))
             if guardrails and guardrails.pii:  # P5.1 out
                 red = guardrails.pii.redact(answer)
                 answer, msg["content"] = red.text, red.text
@@ -198,6 +249,8 @@ def build_graph(
         # interrupt() must come first: on resume this node re-runs from the top.
         calls = state["messages"][-1]["tool_calls"]
         flagged = [c for c in calls if needs_human(state, c)]
+        if not flagged:  # a checkpoint resumed after a policy change; nothing to review
+            return {}
         decision = interrupt({"tool_calls": flagged, "role": state.get("role")})
         approved = bool(decision.get("approved")) if isinstance(decision, dict) else bool(decision)
         who = (
@@ -235,7 +288,38 @@ def build_graph(
         if last["role"] == "tool":  # approve() rejected: nothing to run
             return {}
         out = []
+        blocked = dict(last.get("denied") or {})
+        variables = dict(state.get("variables", {}))
+        q_tokens, q_usd = 0, 0.0
         for c in last["tool_calls"]:
+            if c["id"] in blocked:
+                if governance is not None:
+                    governance.record_rejection(
+                        c["name"],
+                        tenant_id=state["tenant_id"],
+                        role=state.get("role"),
+                        args=c["args"],
+                        call_id=c["id"],
+                        approver=f"policy:{blocked[c['id']]}",
+                    )
+                obs = f"{DENIAL_PREFIX}policy {blocked[c['id']]}: this call is not allowed"
+                out.append(
+                    {"role": "tool", "tool_call_id": c["id"], "name": c["name"], "content": obs}
+                )
+                continue
+            if quarantine is not None and c["name"] == EXTRACT.name:
+                obs, var, used = extract(c["args"], variables)
+                q_tokens += used[0]
+                q_usd += used[1]
+                if var is not None:
+                    variables[var[0]] = var[1]
+                out.append(
+                    {"role": "tool", "tool_call_id": c["id"], "name": c["name"], "content": obs}
+                )
+                continue
+            args = c["args"]
+            if quarantine is not None:
+                args, _ = substitute(args, variables)
             tool = by_name.get(c["name"])
             with tr.start_as_current_span(f"execute_tool {c['name']}") as span:
                 span.set_attribute(ga.GEN_AI_OPERATION_NAME, "execute_tool")
@@ -249,13 +333,13 @@ def build_graph(
                         tool,
                         tenant_id=state["tenant_id"],
                         role=state.get("role"),
-                        args=c["args"],
+                        args=args,
                         call_id=c["id"],
                         approver=state.get("approvals", {}).get(c["id"]),
                     )
                 else:
                     try:
-                        obs = tool.fn(state["tenant_id"], c["args"])
+                        obs = tool.fn(state["tenant_id"], args)
                     except Exception as e:  # tool failure is an observation, not a crash
                         obs = f"error: {type(e).__name__}: {e}"[:500]
                 if obs.startswith(DENIAL_PREFIX):
@@ -270,8 +354,57 @@ def build_graph(
                 and not obs.startswith((DENIAL_PREFIX, "error"))
             ):
                 obs = spotlight(obs)
+            if (
+                quarantine is not None
+                and c["name"] in untrusted
+                and not obs.startswith((DENIAL_PREFIX, "error"))
+            ):  # P5.3: the planner gets a handle; the data stays in state, tainted
+                name = f"$v{len(variables) + 1}"
+                variables[name] = {"value": obs, "source": c["name"], "tainted": True}
+                obs = handle(name, c["name"], obs)
             out.append({"role": "tool", "tool_call_id": c["id"], "name": c["name"], "content": obs})
-        return {"messages": out}
+        res: AgentState = {"messages": out}
+        if quarantine is not None:
+            res["variables"] = variables
+        if q_tokens:
+            res["tokens"] = state.get("tokens", 0) + q_tokens
+            res["usd"] = state.get("usd", 0.0) + q_usd
+        return res
+
+    def extract(
+        args: dict[str, Any], variables: dict[str, dict[str, Any]]
+    ) -> tuple[str, tuple[str, dict[str, Any]] | None, tuple[int, float]]:
+        """Quarantined read: a tool-less model over one variable, output type-checked."""
+        assert quarantine is not None
+        src = variables.get(str(args.get("var", "")))
+        kind = str(args.get("type", "text"))
+        if src is None:
+            return f"error: unknown variable {args.get('var')!r}", None, (0, 0.0)
+        with tr.start_as_current_span(f"chat {quarantine.name}") as span:
+            span.set_attribute(ga.GEN_AI_OPERATION_NAME, "chat")
+            span.set_attribute(ga.GEN_AI_REQUEST_MODEL, quarantine.name)
+            span.set_attribute("pap.guardrail.quarantine", True)
+            d = quarantine.decide(
+                [
+                    {"role": "system", "content": QUARANTINE.format(type=kind)},
+                    {
+                        "role": "user",
+                        "content": f"Question: {args.get('question', '')}\n\n"
+                        + spotlight(str(src["value"])),
+                    },
+                ],
+                [],
+            )
+        used = (
+            d.input_tokens + d.output_tokens,
+            cost_usd(quarantine.name, d.input_tokens, d.output_tokens),
+        )
+        value = validate(kind, d.text)
+        if value is None:
+            return f"error: extract found no valid {kind}", None, used
+        name = f"$v{len(variables) + 1}"
+        var = {"value": value, "source": f"extract:{src['source']}", "tainted": True, "type": kind}
+        return f"{name} = extracted {kind} (untrusted, validated)", (name, var), used
 
     def reflect(state: AgentState) -> AgentState:
         answer = state.get("answer", "")
