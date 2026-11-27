@@ -31,6 +31,22 @@ curl -fsS localhost:9090/api/v1/targets | grep -q '"job":"pap-api"' || fail "pro
 curl -fsS -u "admin:${GRAFANA_ADMIN_PASSWORD:-pap-dev-only}" localhost:3001/api/dashboards/uid/pap-api >/dev/null \
   || fail "grafana dashboard not provisioned"
 
+# Phase 4: provider fallback (mock-flaky 503 -> mock) and streaming, through LiteLLM from the api.
+"${C[@]}" exec -T api python - <<'PY' || fail "litellm fallback/stream"
+import asyncio, os, httpx
+from gateway.client import GatewayModel, StreamClient
+url, key = os.environ["PAP_LLM_GATEWAY_URL"], os.environ["PAP_LLM_API_KEY"]
+d = GatewayModel(url, key, name="mock-flaky").decide([{"role": "user", "content": "smoke"}], [])
+assert d.text.startswith("mock answer"), d
+async def s():
+    async with httpx.AsyncClient(base_url=url) as h:
+        return [x async for x in StreamClient(h, key).stream("mock", [{"role": "user", "content": "a b"}])]
+assert len(asyncio.run(s())) >= 2
+r = httpx.post(f"{url}/key/generate", headers={"Authorization": f"Bearer {key}"}, json={})
+assert r.status_code == 403, r.status_code
+print("LITELLM_FALLBACK_OK=1 ADMIN_ROUTE_BLOCKED=1")
+PY
+
 if [ "$LLMOBS" = 1 ]; then
   for _ in $(seq 60); do curl -fsS localhost:3000/api/public/health >/dev/null 2>&1 && break; sleep 5; done
   curl -fsS localhost:3000/api/public/health | grep -q '"OK"' || fail "langfuse health"
