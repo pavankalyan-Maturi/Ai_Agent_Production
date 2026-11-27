@@ -11,6 +11,8 @@ agents:
 
   researcher:
     description: Read-only planner/research role. Retrieval and arithmetic, no side effects.
+    # MCP gateway only (ADR 007): callers prove this role with X-Sentinel-Token.
+    token_env: PAP_MCP_RESEARCHER_TOKEN
     allow: [search, fetch_doc, calculator]
     arguments:
       search:
@@ -24,6 +26,7 @@ agents:
   operator:
     description: Execution role. Everything a researcher can do, plus side-effecting tools that a human approves first.
     inherits: [researcher]
+    token_env: PAP_MCP_OPERATOR_TOKEN
     allow: [create_ticket]
     require_approval: [create_ticket]
     arguments:

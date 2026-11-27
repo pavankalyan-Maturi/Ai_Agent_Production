@@ -27,9 +27,9 @@ Acceptance: DLQ test, filtered-recall test, ablation row per config with CI link
 - P2.6 grounded reflection only on external failure signals — IN REVIEW (PR B)
 
 ## Phase 3: MCP + A2A  [CHECKPOINT: protocol conformance review]
-- P3.0 tool governance with mcp-rbac-gateway (owner request): RBAC roles, arg constraints, redaction, injection blocking, approvals + audit API — IN REVIEW (PR A, ADR 006)
-- P3.1 MCPServer (stateless, Streamable HTTP), tools = retrieval/search; OAuth per spec, ADR
-- P3.2 conformance tests with SDK v2 Client both eras; 2-replica kind test
+- P3.0 tool governance with mcp-rbac-gateway (owner request): RBAC roles, arg constraints, redaction, injection blocking, approvals + audit API — DONE (PR #6, ADR 006)
+- P3.1 MCPServer (stateless, Streamable HTTP), tools = retrieval/search; OAuth per spec, ADR — IN REVIEW (PR B, ADR 007; behind mcp-rbac-gateway StatelessHttpProxy)
+- P3.2 conformance tests with SDK v2 Client both eras; 2-replica kind test — IN REVIEW (PR B: both eras + in-process 2-replica round robin; kind e2e NOT RUN)
 - P3.3 tool-retrieval (RAG-MCP) flag + tool-count scaling eval
 - P3.4 A2A card (supported_interfaces, skills, securityRequirements), JWS signing + verification test
 

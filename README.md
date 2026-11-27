@@ -8,7 +8,7 @@ Every claim here links to a CI run or a row in [docs/RESULTS.md](docs/RESULTS.md
 | 0 | Skeleton: FastAPI, probes, OTel, Prometheus/Grafana/Loki, Langfuse v4, compose, CI | done |
 | 1 | Ingestion (Celery+DLQ), contextual retrieval, hybrid pgvector+FTS, rerank, ablation | done |
 | 2 | LangGraph agent, Postgres checkpointer, budgets, HITL, gated experience memory | done |
-| 3 | Tool governance (mcp-rbac-gateway), MCP 2026-07-28 (stateless) server, A2A v1 card | in progress |
+| 3 | Tool governance (mcp-rbac-gateway), MCP 2026-07-28 (stateless) server behind the gateway, A2A v1 card | in progress (A merged, B in review) |
 | 4 | LiteLLM gateway, rate limits, exact+semantic cache, SSE, Locust | todo |
 | 5 | Guardrails: PII, injection suite, plan/data separation, step+trace checks | todo |
 | 6 | Evals, judge calibration, MAST tagging, CI eval gate, GEPA | todo |
@@ -48,6 +48,24 @@ observation for the model: the tool's redacted output, or a structured denial �
   - `GET /api/v1/security/approvals`, `POST …/{id}/approve|deny`
   - `GET /api/v1/security/audit?tenant_id=…`
 - **Cost.** About 2 ms per tool call (RESULTS, Phase 3A).
+
+## MCP server
+
+`mcp_server/` serves the retrieval tools (`search`, `fetch_doc`) over MCP. It speaks spec 2026-07-28 (stateless Streamable HTTP), and 2025-era clients still work directly against it. Details are in [ADR 007](docs/adr/007-mcp-server.md).
+
+```
+agent / MCP client ──► gateway :8002  (mcp-rbac-gateway StatelessHttpProxy, sentinel.yaml)
+   Authorization: Bearer <OAuth JWT>       role from X-Sentinel-Token, policy, redaction,
+   X-Sentinel-Token: <role token>          injection scan, header/body check, audit
+                                    ──► MCP server :8001 (internal)
+                                           tenant from the JWT `tenant_id`, aud = resource URL
+```
+
+```bash
+PAP_MCP_JWT_KEY=... uv run uvicorn --factory mcp_server.app:server_app --port 8001
+PAP_MCP_APPROVAL_TOKEN=... PAP_MCP_RESEARCHER_TOKEN=... \
+  uv run uvicorn --factory mcp_server.app:gateway_app --port 8002
+```
 
 ## Run it
 ```bash
