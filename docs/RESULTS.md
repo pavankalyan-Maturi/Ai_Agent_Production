@@ -378,3 +378,16 @@ FM-1.1 17, FM-3.2 14, FM-3.1 8, FM-3.3 3; FM-1.3 and FM-1.5 0.
   evidence recall at 0.91, the agent usually saw the right paragraphs.
 - MAST tags are rule approximations, UNVERIFIED against human tags. FM-2.x not applicable.
 - P6.5 GEPA vs MIPROv2: cut (user decision), not run.
+
+### P6.2 judge calibration (eval-gate run 45937184613, $0.000: all calls cached)
+100 human labels (`evals/labels/hotpot_correctness.csv`, user-written): 84 correct / 16 incorrect.
+
+| Grader vs human | Cohen's kappa [95% bootstrap CI] |
+|---|---|
+| Haiku 5.5 judge (81 correct) | **0.827 [0.657, 0.960]** |
+| F1 ≥ 0.5 rule | 0.241 [0.124, 0.380] |
+
+The judge clears the 0.6 bar even at its CI lower bound; token F1 barely agrees with a human
+(mean F1 0.501 vs 84% human-correct). F1 is the wrong headline metric for this agent; judge
+accuracy (81%) is close to the human rate (84%). `evals/baselines/agent_off.json` (per-question
+f1, usd, evidence recall, judge verdict from this run) now drives the paired-bootstrap gate.

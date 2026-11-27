@@ -21,11 +21,11 @@
 
 ## Not verified
 - CI eval-gate on PR #14: F1 0.501 reproduced from cache ($0.00), judge $0.003; RESULTS.md Phase 6A.
-- Judge kappa: BLOCKED on human labels. MAST rule tags not checked against human tags.
+- Judge kappa 0.827 [0.657, 0.96] vs 100 human labels (F1 rule 0.241). MAST rule tags not checked against human tags.
 
 ## Open
-- CHECKPOINT: user labels 100 items and signs off thresholds in `evals/gate.toml`; then commit
-  `evals/baselines/agent_off.json` (from the run's `baseline_candidate.json`) and flip enforce.
+- Labels in (PR #16) and per-question baseline committed (PR #17). CHECKPOINT left: user signs off
+  which metrics to enforce in `evals/gate.toml` (today f1 + cost cap only).
 - P6.5 GEPA vs MIPROv2: CUT by user decision (cut list #2), recorded in ADR 012.
 - Gate covers the agent eval only; retrieval/security keep their own workflow rules.
 - From before: agent graph does not use gateway cache/limiter; Keycloak compose profile.

@@ -48,7 +48,7 @@ Acceptance: DLQ test, filtered-recall test, ablation row per config with CI link
 
 ## Phase 6: Evals + CI gate  [CHECKPOINT: human labels + threshold sign-off]
 - P6.1 trajectory evals — IN REVIEW (PR A, ADR 012)
-- P6.2 judge calibration (kappa) vs evals/labels/ — IN REVIEW (PR A; code done, kappa BLOCKED on human labels)
+- P6.2 judge calibration (kappa) vs evals/labels/ — DONE (kappa 0.827 vs 100 human labels, PR #16/#17)
 - P6.3 MAST tagging + histogram — IN REVIEW (PR A; rule-based, 6 of 14 modes)
 - P6.4 eval-gate.yml with bootstrap CI and cost cap — IN REVIEW (PR A; thresholds await sign-off)
 - P6.5 GEPA vs MIPROv2 on synthesis module — CUT (user decision 2026-11-27, SPEC cut list #2; ADR 012)
