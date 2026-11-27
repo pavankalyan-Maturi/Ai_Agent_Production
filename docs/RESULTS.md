@@ -124,4 +124,22 @@ Reading: ungated memory made answers significantly worse. The gate removed about
 - About half the runs had partial F1 (0.2-0.8), mostly answer phrasing, and were distilled as "failures", producing wrong pitfalls.
 - Replaying the source question admits items that only fit that question.
 
-Run 2 (this PR, after the changes in ADR 005): recall top 2 at ≥ 0.6, distil only clear outcomes (F1 ≥ 0.8 or ≤ 0.2), gate replays the nearest *other* question (a transfer test). Numbers: see the PR's `eval-agent` run.
+Run 2 ([job](https://github.com/pavankalyan-Maturi/Ai_Agent_Production/actions/runs/45915984763/job/140235191815), commit 9a7ea83, $0.20, 955 new calls). Setup: recall top 2 at ≥ 0.6, distil only clear outcomes (F1 ≥ 0.8 or ≤ 0.2), gate replays the nearest *other* question (a transfer test). Run 1's response cache was not saved (failed jobs don't save caches), so the off arm re-ran live.
+
+| Arm | EM | F1 | F1 (2nd half) | ΔF1 vs off [95% CI] | Steps | Tokens/q | Memory | Gate |
+|---|---|---|---|---|---|---|---|---|
+| off | 0.310 | 0.479 | 0.490 | - | 2.57 | 4213 | 0 | - |
+| on | 0.290 | 0.445 | 0.464 | −0.033 [−0.097, +0.026] | 2.54 | 4480 | 112 | - |
+| gated | 0.260 | 0.444 | 0.470 | −0.034 [−0.082, +0.012] | 2.50 | 4318 | 47 | admitted 47, replay_worse 51, answer_leak 3 |
+
+Reading:
+- Neither memory arm is significantly different from no memory. The CIs include 0, and the point estimates are still slightly negative.
+- The gate admitted 47 of 101 candidates and kept tokens near the off arm (4318 vs 4213 per question). The loss is no longer significant, but there is no gain.
+- The off arm moved 0.483 → 0.479 between runs with identical code, which is the run-to-run noise of the model.
+- eval-gate:agent passed (gated ≥ off − 0.05).
+
+**Conclusion: experience memory does not help Haiku 5.5 on this HotpotQA slice. It stays off by default.** It is available, gated, for workloads where an eval shows a gain. Likely limits (UNVERIFIED): HotpotQA questions rarely share entities, so "strategy" lessons are generic, and the base loop is short (2.5 steps). A first-half/second-half split of 50 questions each is also small.
+
+Mean estimated context tokens per model call, real model (arm off, compaction on, run 2): 104, 865, 1345, 1650, 1686. Runs are short, so compaction rarely triggers here.
+
+Total Haiku spend for the ablation: $0.48 (run 1 $0.28 + run 2 $0.20).

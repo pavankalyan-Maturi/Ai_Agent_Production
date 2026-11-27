@@ -57,6 +57,12 @@ Ungated memory (the `on` arm) admits everything the distiller writes. It is the 
 - **eval-gate:agent:** the job fails if gated F1 < off F1 − 0.05.
 - Fork PRs without the secret report NOT MEASURED and pass.
 
+## Result
+
+- Run 1: memory hurt. Ungated was −0.091 F1, significant; gated was −0.062.
+- Run 2, after the changes above: neither arm differs significantly from no memory (gated −0.034, CI [−0.082, +0.012]). The eval gate passes.
+- Decision: memory is **off by default** (`recall=None`), and the code and gate stay. A tenant or workload turns it on only when this eval, run on its own data, shows a gain. See RESULTS Phase 2B.
+
 ## Rejected
 
 - Rewriting state messages for compaction: this needs a custom reducer and loses the audit trail.
