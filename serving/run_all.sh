@@ -5,7 +5,13 @@
 # and skipped, instead of hanging the loop.
 set -uo pipefail
 cd "$(dirname "$0")/.."
-: "${VLLM_API_KEY:?export VLLM_API_KEY}"
+: "${VLLM_API_KEY:?export VLLM_API_KEY (inside tmux: exports made before tmux are lost)}"
+: "${HF_TOKEN:?export HF_TOKEN (inside tmux: exports made before tmux are lost)}"
+# Fail fast instead of marking all four arms "did not run".
+if ! command -v docker >/dev/null && ! command -v vllm >/dev/null \
+   && [[ ! -x "${VLLM_BIN:-/opt/vllm/bin/vllm}" ]]; then
+  echo "vllm not found and no Docker: see docs/runbooks/vllm.md step 2" >&2; exit 127
+fi
 STARTUP_TIMEOUT_S="${STARTUP_TIMEOUT_S:-1200}"   # first arm downloads ~16 GB of weights
 mkdir -p serving/results
 arms=("$@"); [[ ${#arms[@]} -gt 0 ]] || arms=(baseline prefix eagle3 prefix+eagle3)
@@ -24,10 +30,10 @@ for arm in "${arms[@]}"; do
   done
   if [[ $up == 1 ]]; then
     echo "== $arm: server up after ~${t}s, benchmarking"
-    uv run python -m serving.bench --arm "$arm" --concurrency 1 8 32 --requests 64 \
+    uv run --no-sync python -m serving.bench --arm "$arm" --concurrency 1 8 32 --requests 64 \
       --out "serving/results/$arm.json" > /dev/null && echo "== $arm: done"
   else
-    echo "== $arm: DID NOT RUN (see tail of serving/results/$arm.log)"
+    echo "== $arm: DID NOT RUN; last log lines:"; tail -n 5 "serving/results/$arm.log"
     echo "{\"arm\": \"$arm\", \"did_not_run\": true}" > "serving/results/$arm.json"
   fi
   kill "$pid" 2>/dev/null; docker rm -f pap-vllm >/dev/null 2>&1; wait "$pid" 2>/dev/null

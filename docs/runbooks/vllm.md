@@ -17,20 +17,20 @@ Stop the pod as soon as step 5 is done. A stopped pod with a volume still bills 
 - Or a bare GPU VM with Docker + the NVIDIA container toolkit; then `serve.sh` uses `$VLLM_IMAGE`.
 - On the box: `nvidia-smi` shows the GPU.
 
-## 2. Setup
+## 2. Setup (everything inside tmux, so a dropped SSH connection does not kill the run)
 ```bash
-git clone https://github.com/pavankalyan-Maturi/Ai_Agent_Production && cd Ai_Agent_Production
+tmux new -s bench              # reattach later with: tmux attach -t bench
+cd /root && git clone https://github.com/pavankalyan-Maturi/Ai_Agent_Production && cd Ai_Agent_Production
 pip install uv && uv sync --frozen
-pip install vllm==0.34.0          # only when there is no Docker (RunPod)
-export HF_TOKEN=...            # accept the Llama 3.1 licence on HF first
+# No Docker (RunPod): vLLM in its own venv, not .venv, so `uv run` never re-syncs it away.
+uv venv /opt/vllm --python 3.12 && uv pip install --python /opt/vllm vllm==0.34.0
+export HF_TOKEN=...            # accept the Llama 3.1 licence on HF first; export INSIDE tmux
 export VLLM_API_KEY=$(openssl rand -hex 16)
-mkdir -p serving/results
 ```
 
 ## 3. Run the four arms (one server at a time)
 ```bash
-tmux new -s bench         # so a dropped SSH connection does not kill the run
-serving/run_all.sh        # ~40-60 min; first arm downloads the weights
+serving/run_all.sh             # ~40-60 min; first arm downloads the weights
 ```
 It starts each arm, waits for `/v1/models`, runs `serving.bench` at concurrency 1/8/32 x 64
 requests, stops the server and writes `serving/results/<arm>.json`, `<arm>.log` and `gpu.csv`.

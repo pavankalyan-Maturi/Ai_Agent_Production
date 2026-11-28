@@ -1,12 +1,12 @@
 # ADR 013: vLLM serving behind LiteLLM (Phase 7)
 
-Status: accepted (config + bench + runbook). GPU numbers: NOT MEASURED (human-run, P7.3).
+Status: accepted. Measured on a RunPod L40S on 2026-11-28 (P7.3, docs/RESULTS.md "Phase 7.3").
 
 ## Decision
 - vLLM **0.34.0** (`vllm/vllm-openai:v0.34.0`, SPEC pin), OpenAI-compatible server, one GPU.
 - Model **meta-llama/Llama-3.1-8B-Instruct**, served as `local-llm`. Chosen because it fits an L40S
   with room for KV cache at 8k context and has a published EAGLE-3 draft head
-  (`yuhuili/EAGLE3-LLaMA3.1-Instruct-8B`). Draft/vLLM-version compatibility is UNVERIFIED.
+  (`yuhuili/EAGLE3-LLaMA3.1-Instruct-8B`). It loads and runs on vLLM 0.34.0 (acceptance length 2.71).
 - LiteLLM entry `local-vllm` -> `hosted_vllm/local-llm`, `api_base`/`api_key` from env. The served
   name decouples the gateway from the HF repo, so swapping the model is a `vllm.env` change only.
 - Fallback `local-vllm -> agent-fast` (Haiku). Availability over cost; delete the line to fail closed.
@@ -29,6 +29,8 @@ Status: accepted (config + bench + runbook). GPU numbers: NOT MEASURED (human-ru
 ## Tradeoffs
 - Prefix caching costs nothing on miss in vLLM V1, so the "off" arm exists only to quantify it.
 - Speculative decoding trades compute for latency; expected to help at batch 1 and fade at 32.
+  Measured: TPOT 21.5 -> 10.2 ms at c=1, and it did **not** fade at c=32 on this short-answer
+  workload (+28% tok/s on top of prefix caching). Prefix caching was the bigger win (8.9x tok/s at c=32).
 - Our tenant-scoped response cache (ADR 011) sits in front; vLLM's prefix cache is cross-tenant at
   the KV level. It leaks nothing via outputs, but timing side channels on shared prefixes are a known
   risk; acceptable for a single-tenant GPU box, revisit before multi-tenant serving.
@@ -37,3 +39,8 @@ Status: accepted (config + bench + runbook). GPU numbers: NOT MEASURED (human-ru
 ## Verified here
 `serving/bench.py` against the mock (tests/serving), LiteLLM config shape, `bash -n serve.sh`.
 Compose smoke routes `local-vllm` through LiteLLM to the mock (CI only).
+
+## Measured (P7.3, L40S, vLLM 0.34.0)
+c=32 output tok/s: baseline 97, prefix 862, eagle3 96, prefix+eagle3 1103. TTFT p50 at c=32:
+2962 ms -> 161 ms with prefix caching. Default serving config: prefix caching + EAGLE-3.
+Not measured: decode-heavy workloads, the LiteLLM hop, repeat runs.

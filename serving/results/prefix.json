@@ -1,0 +1,37 @@
+{
+  "arm": "prefix",
+  "model": "local-llm",
+  "max_tokens": 256,
+  "levels": [
+    {
+      "concurrency": 1,
+      "requests": 64,
+      "errors": 0,
+      "ttft_p50_ms": 51.64041405078024,
+      "ttft_p95_ms": 53.46062092576176,
+      "tpot_p50_ms": 21.53399449889548,
+      "output_tok_per_s": 43.23620338227581,
+      "wall_s": 28.124578590970486
+    },
+    {
+      "concurrency": 8,
+      "requests": 64,
+      "errors": 0,
+      "ttft_p50_ms": 82.88065600208938,
+      "ttft_p95_ms": 117.43118695449084,
+      "tpot_p50_ms": 23.18140116727187,
+      "output_tok_per_s": 298.56065486556884,
+      "wall_s": 4.072874239063822
+    },
+    {
+      "concurrency": 32,
+      "requests": 64,
+      "errors": 0,
+      "ttft_p50_ms": 160.80209205392748,
+      "ttft_p95_ms": 284.48375302832574,
+      "tpot_p50_ms": 27.93176919415904,
+      "output_tok_per_s": 861.5289451202378,
+      "wall_s": 1.4114441620185971
+    }
+  ]
+}
