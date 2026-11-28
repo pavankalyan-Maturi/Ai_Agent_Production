@@ -1,5 +1,13 @@
 # Handoff
 
+## Latest: P7.3 GPU numbers recorded (2026-11-28)
+- The user ran `serving/run_all.sh` on a RunPod L40S. All 4 arms ran with 0 errors. Raw files are in
+  `serving/results/` (force-added: the folder is gitignored). The table is in RESULTS "Phase 7.3" and ADR 013 is updated.
+- Headline: prefix caching gives 8.9x tok/s at c=32; EAGLE-3 halves TPOT at c=1 and, unexpectedly,
+  still helps at c=32 (+28%). Recommended default: prefix+eagle3.
+- Open: LiteLLM-hop bench (runbook step 4) and a decode-heavy workload are NOT MEASURED.
+  Phase 7 is otherwise done.
+
 ## Latest: runbook fixes from the first real RunPod run (2026-11-28)
 - The user hit two gaps on the L40S: exports made before `tmux new` are lost inside tmux, and
   `pip install vllm` was not on PATH after `uv sync`, so all four arms "did not run".

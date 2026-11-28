@@ -1,0 +1,43 @@
+# Excerpt of the vLLM server log for arm eagle3 (P7.3, RunPod L40S, 2026-11-28).
+# Engine init, KV cache, warnings, spec-decode metrics, then the last 25 lines.
+(APIServer pid=2171) WARNING 11-28 02:20:58 [model.py:2560] Casting torch.float16 to torch.bfloat16.
+(APIServer pid=2171) WARNING 11-28 02:21:08 [vllm.py:2282] max_num_scheduled_tokens is set to 2048 based on the speculative decoding settings. This may lead to suboptimal performance. Consider increasing max_num_batched_tokens to accommodate the additional draft token slots, or decrease num_speculative_tokens.
+(EngineCore pid=2588) INFO 11-28 02:21:19 [core.py:153] Initializing a V1 LLM engine (v0.34.0) with config: model='meta-llama/Llama-3.1-8B-Instruct', speculative_config=SpeculativeConfig(method='eagle3', model='yuhuili/EAGLE3-LLaMA3.1-Instruct-8B', num_spec_tokens=3), tokenizer='meta-llama/Llama-3.1-8B-Instruct', skip_tokenizer_init=False, tokenizer_mode=auto, revision=main, tokenizer_revision=mai
+(EngineCore pid=2588) WARNING 11-28 02:22:23 [extensible_kv_cache.py:662] gpu_memory_utilization=0.9 caps this instance at 39.95 GiB, keeping 2.91 GiB of free device memory out of the KV cache. The extensible KV cache is sized from the memory measured after warmup and CUDA graph capture, so vLLM's own use needs no headroom below 1.0. Leave gpu_memory_utilization unset unless it leaves room for mem
+(EngineCore pid=2588) INFO 11-28 02:22:23 [kv_cache_utils.py:1168] GPU KV cache size: 175,616 tokens, Maximum concurrency for 8,192 tokens per request: 21.44x
+(EngineCore pid=2588) INFO 11-28 02:22:23 [core.py:451] init engine (profile, create kv cache, warmup model) took 52.21 s (compilation: 19.81 s)
+(EngineCore pid=2588) WARNING 11-28 02:22:23 [vllm.py:2282] max_num_scheduled_tokens is set to 2048 based on the speculative decoding settings. This may lead to suboptimal performance. Consider increasing max_num_batched_tokens to accommodate the additional draft token slots, or decrease num_speculative_tokens.
+(APIServer pid=2171) WARNING 11-28 02:22:24 [model.py:1931] Default vLLM sampling parameters have been overridden by the model's `generation_config.json`: `{'temperature': 0.6, 'top_p': 0.9}`. If this is not intended, please relaunch vLLM instance with `--generation-config vllm`.
+(APIServer pid=2171) INFO 11-28 02:22:34 [metrics.py:120] SpecDecoding metrics: Mean acceptance length: 2.71, Accepted throughput: 18.68 tokens/s, Drafted throughput: 32.69 tokens/s, Accepted: 204 tokens, Drafted: 357 tokens, Per-position acceptance rate: 1.000, 0.429, 0.286, Avg Draft acceptance rate: 57.1%
+(APIServer pid=2171) INFO 11-28 02:22:44 [metrics.py:120] SpecDecoding metrics: Mean acceptance length: 2.71, Accepted throughput: 30.00 tokens/s, Drafted throughput: 52.50 tokens/s, Accepted: 300 tokens, Drafted: 525 tokens, Per-position acceptance rate: 1.000, 0.429, 0.286, Avg Draft acceptance rate: 57.1%
+(APIServer pid=2171) INFO 11-28 02:22:54 [metrics.py:120] SpecDecoding metrics: Mean acceptance length: 2.74, Accepted throughput: 28.50 tokens/s, Drafted throughput: 49.19 tokens/s, Accepted: 285 tokens, Drafted: 492 tokens, Per-position acceptance rate: 1.000, 0.439, 0.299, Avg Draft acceptance rate: 57.9%
+(APIServer pid=2171) INFO 11-28 02:23:04 [metrics.py:120] SpecDecoding metrics: Mean acceptance length: 2.72, Accepted throughput: 59.99 tokens/s, Drafted throughput: 104.39 tokens/s, Accepted: 600 tokens, Drafted: 1044 tokens, Per-position acceptance rate: 1.000, 0.431, 0.293, Avg Draft acceptance rate: 57.5%
+(APIServer pid=2171) INFO 11-28 02:23:14 [metrics.py:120] SpecDecoding metrics: Mean acceptance length: 2.71, Accepted throughput: 59.80 tokens/s, Drafted throughput: 104.69 tokens/s, Accepted: 598 tokens, Drafted: 1047 tokens, Per-position acceptance rate: 1.000, 0.427, 0.287, Avg Draft acceptance rate: 57.1%
+(APIServer pid=2171) WARNING 11-28 02:23:19 [utils.py:648] [shutdown] Process manager: force killing remaining processes count=1
+(APIServer pid=2171) WARNING 11-28 02:23:19 [utils.py:653] [shutdown] Process manager: force killing remaining process EngineCore pid 2588
+# ...
+INFO:     127.0.0.1:47824 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(APIServer pid=2171) INFO 11-28 02:23:14 [loggers.py:335] Engine 000: Avg prompt throughput: 11039.1 tokens/s, Avg generation throughput: 94.8 tokens/s, Running: 9 reqs, Waiting: 22 reqs, GPU KV cache usage: 10.5%
+(APIServer pid=2171) INFO 11-28 02:23:14 [metrics.py:120] SpecDecoding metrics: Mean acceptance length: 2.71, Accepted throughput: 59.80 tokens/s, Drafted throughput: 104.69 tokens/s, Accepted: 598 tokens, Drafted: 1047 tokens, Per-position acceptance rate: 1.000, 0.427, 0.287, Avg Draft acceptance rate: 57.1%
+(APIServer pid=2171) INFO 11-28 02:23:19 [launcher.py:256] [shutdown] API server: shutdown triggered
+(APIServer pid=2171) INFO 11-28 02:23:19 [launcher.py:269] [shutdown] API server: stopping engine client mode=abort timeout=0s
+(APIServer pid=2171) INFO 11-28 02:23:19 [core_client.py:822] [shutdown] MPClient: start timeout=0s
+(APIServer pid=2171) INFO 11-28 02:23:19 [core_client.py:824] [shutdown] MPClient: stopping engine manager
+(APIServer pid=2171) INFO 11-28 02:23:19 [utils.py:628] [shutdown] Process manager: send sigterm to process EngineCore
+(APIServer pid=2171) WARNING 11-28 02:23:19 [utils.py:648] [shutdown] Process manager: force killing remaining processes count=1
+(APIServer pid=2171) WARNING 11-28 02:23:19 [utils.py:653] [shutdown] Process manager: force killing remaining process EngineCore pid 2588
+(EngineCore pid=2588) INFO 11-28 02:23:19 [core.py:1698] [shutdown] EngineCore: trigger received signal=SIGTERM
+(EngineCore pid=2588) INFO 11-28 02:23:19 [core.py:1889] [shutdown] EngineCore: start mode=abort timeout=0s
+(EngineCore pid=2588) INFO 11-28 02:23:19 [core.py:1920] [shutdown] EngineCore: request processing complete; starting resource teardown
+(EngineCore pid=2588) INFO 11-28 02:23:19 [core.py:1746] [shutdown] EngineCore: exiting busy loop
+(APIServer pid=2171) INFO 11-28 02:23:19 [core_client.py:826] [shutdown] MPClient: engine manager stopped
+(APIServer pid=2171) INFO 11-28 02:23:19 [core_client.py:827] [shutdown] MPClient: cleaning up background resources
+(APIServer pid=2171) INFO 11-28 02:23:19 [core_client.py:829] [shutdown] MPClient: complete
+(APIServer pid=2171) INFO 11-28 02:23:19 [launcher.py:278] [shutdown] API server: engine client stopped
+(APIServer pid=2171) INFO 11-28 02:23:19 [launcher.py:281] [shutdown] API server: signalling HTTP server shutdown
+(APIServer pid=2171) INFO 11-28 02:23:19 [launcher.py:304] [shutdown] API server: shutting down FastAPI HTTP server
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+/usr/lib/python3.12/multiprocessing/resource_tracker.py:254: UserWarning: resource_tracker: There appear to be 1 leaked semaphore objects to clean up at shutdown
+  warnings.warn('resource_tracker: There appear to be %d '
