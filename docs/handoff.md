@@ -1,6 +1,19 @@
 # Handoff
 
-## Latest: P7.3 GPU numbers recorded (2026-11-28)
+## Latest: P8.3 prep, AWS burst walkthrough + runbook fixes (nothing run on AWS)
+- `scripts/burst_preflight.sh` (free, read-only AWS calls): tool pins (terraform 1.13.x is
+  required by `~> 1.13.0`), env vars, not-root, EKS version in standard support, EC2 vCPU quota
+  >= 4, CRLF check. `burst_up.sh` runs it first; both scripts set `AWS_PAGER=""` (CLI v2 pager
+  would hang them).
+- Runbook: one `~/pap-burst.env` sourced in every terminal (a second terminal without it made
+  Locust sign with its fallback secret -> all 401s), `LOAD_JWT_SECRET` moved into it, WSL2 setup
+  and exact Linux installs, `docker build --platform linux/amd64`, Free plan credits note,
+  k3s path marked not scripted end to end (no registry, no pgBackRest S3/role, no up script).
+- `.gitattributes`: `*.sh eol=lf` for Windows checkouts. 2 new tests.
+- Verified here: gate green (190 passed). NOT run: preflight against real AWS, anything on AWS.
+- Next: user follows the walkthrough (EKS path) and pastes evidence (P8.3).
+
+## Previous: P7.3 GPU numbers recorded (2026-11-28)
 - The user ran `serving/run_all.sh` on a RunPod L40S. All 4 arms ran with 0 errors. Raw files are in
   `serving/results/` (force-added: the folder is gitignored). The table is in RESULTS "Phase 7.3" and ADR 013 is updated.
 - Headline: prefix caching gives 8.9x tok/s at c=32; EAGLE-3 halves TPOT at c=1 and, unexpectedly,
@@ -8,7 +21,7 @@
 - Open: LiteLLM-hop bench (runbook step 4) and a decode-heavy workload are NOT MEASURED.
   Phase 7 is otherwise done.
 
-## Latest: runbook fixes from the first real RunPod run (2026-11-28)
+## Previous: runbook fixes from the first real RunPod run (2026-11-28)
 - The user hit two gaps on the L40S: exports made before `tmux new` are lost inside tmux, and
   `pip install vllm` was not on PATH after `uv sync`, so all four arms "did not run".
 - Runbook step 2 now starts tmux first and exports inside it; vLLM goes into its own venv
@@ -18,7 +31,7 @@
 - Verified here: gate green, 189 passed (1 new preflight test). GPU path UNVERIFIED by me;
   the user's run is in progress.
 
-## Latest: Phase 8 (P8.1-P8.3 code) AWS burst as code + runbook, nothing applied
+## Previous: Phase 8 (P8.1-P8.3 code) AWS burst as code + runbook, nothing applied
 - `deploy/terraform/eks`: VPC (public subnets, no NAT), EKS 1.34 standard support, spot node group
   (1 AZ), EBS CSI + core add-ons, IRSA (EBS CSI, LBC, pgBackRest), S3 pgBackRest repo, ECR,
   Secrets Manager container, AWS Budget. `deploy/terraform/k3s`: one spot EC2 k3s node, 10 h

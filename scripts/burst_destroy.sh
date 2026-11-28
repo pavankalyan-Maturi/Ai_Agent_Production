@@ -3,6 +3,7 @@
 # Order matters: the ALB and EBS volumes are created by controllers, not Terraform, and a
 # leftover ALB/ENI blocks VPC deletion; so delete them through Kubernetes first.
 set -uo pipefail
+export AWS_PAGER=""
 TF=deploy/terraform/eks
 REGION=$(terraform -chdir=$TF output -raw region 2>/dev/null || echo "${AWS_REGION:-us-east-1}")
 
