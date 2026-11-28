@@ -1,6 +1,6 @@
 # Cheaper alternative to ../eks (P8.1): one k3s node on EC2 in the default VPC. No EKS control
-# plane, no ALB (k3s ships Traefik), no IRSA; pgBackRest uses an instance-profile role instead.
-# Same chart and drills; KEDA and Chaos Mesh work as on EKS.
+# plane, no ALB (k3s ships Traefik), no IRSA. Not scripted end to end yet: no registry, no S3
+# bucket or role for pgBackRest, no bring-up script (docs/runbooks/aws-burst.md).
 terraform {
   required_version = "~> 1.13.0"
   required_providers {

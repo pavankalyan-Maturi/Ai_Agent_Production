@@ -7,7 +7,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 TF = ROOT / "deploy/terraform"
-SCRIPTS = ["burst_up.sh", "burst_destroy.sh", "check_manifests.sh"]
+SCRIPTS = ["burst_up.sh", "burst_destroy.sh", "burst_preflight.sh", "check_manifests.sh"]
 
 
 def _tf(mod: str) -> str:
@@ -68,3 +68,25 @@ def test_scripts_parse() -> None:
     assert bash
     for s in [*SCRIPTS, "../deploy/pgbackrest/restore_drill.sh"]:
         subprocess.run([bash, "-n", str(ROOT / "scripts" / s)], check=True)  # noqa: S603
+
+
+def test_up_runs_preflight_before_terraform() -> None:
+    src = (ROOT / "scripts/burst_up.sh").read_text()
+    head = src.split("terraform -chdir")[0]
+    assert "scripts/burst_preflight.sh" in head and 'AWS_PAGER=""' in head
+
+
+def test_preflight_fails_without_env_file(tmp_path: Path) -> None:
+    # A fresh terminal without `source ~/pap-burst.env`: preflight must refuse, not half-run.
+    bash = shutil.which("bash")
+    assert bash
+    r = subprocess.run(  # noqa: S603
+        [bash, "scripts/burst_preflight.sh"],
+        cwd=ROOT,
+        env={"PATH": "/usr/bin:/bin", "HOME": str(tmp_path)},
+        capture_output=True,
+        text=True,
+        timeout=60,
+    )
+    assert r.returncode == 1
+    assert "$LOAD_JWT_SECRET unset" in r.stdout and "PREFLIGHT FAILED" in r.stdout

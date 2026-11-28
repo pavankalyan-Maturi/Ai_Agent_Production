@@ -6,6 +6,8 @@ set -euo pipefail
 : "${TF_VAR_allowed_cidr:?your IP/32}" "${TF_VAR_alert_email:?}" "${TF_VAR_expires_on:?YYYY-MM-DD}"
 : "${IMAGE_TAG:?pushed image tag}" "${REPO_URL:?git URL Argo CD can read}"
 GIT_REVISION=${GIT_REVISION:-main}
+export AWS_PAGER=""  # aws CLI v2 otherwise opens a pager and the script hangs
+scripts/burst_preflight.sh || exit 1
 TF=deploy/terraform/eks
 aws sts get-caller-identity --query Account --output text
 

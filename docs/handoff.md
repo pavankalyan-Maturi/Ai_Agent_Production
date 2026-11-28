@@ -1,6 +1,19 @@
 # Handoff
 
-## Latest: Phase 8 (P8.1-P8.3 code) AWS burst as code + runbook, nothing applied
+## Latest: P8.3 prep, AWS burst walkthrough + runbook fixes (nothing run on AWS)
+- `scripts/burst_preflight.sh` (free, read-only AWS calls): tool pins (terraform 1.13.x is
+  required by `~> 1.13.0`), env vars, not-root, EKS version in standard support, EC2 vCPU quota
+  >= 4, CRLF check. `burst_up.sh` runs it first; both scripts set `AWS_PAGER=""` (CLI v2 pager
+  would hang them).
+- Runbook: one `~/pap-burst.env` sourced in every terminal (a second terminal without it made
+  Locust sign with its fallback secret -> all 401s), `LOAD_JWT_SECRET` moved into it, WSL2 setup
+  and exact Linux installs, `docker build --platform linux/amd64`, Free plan credits note,
+  k3s path marked not scripted end to end (no registry, no pgBackRest S3/role, no up script).
+- `.gitattributes`: `*.sh eol=lf` for Windows checkouts. 2 new tests.
+- Verified here: gate green (190 passed). NOT run: preflight against real AWS, anything on AWS.
+- Next: user follows the walkthrough (EKS path) and pastes evidence (P8.3).
+
+## Previous: Phase 8 (P8.1-P8.3 code) AWS burst as code + runbook, nothing applied
 - `deploy/terraform/eks`: VPC (public subnets, no NAT), EKS 1.34 standard support, spot node group
   (1 AZ), EBS CSI + core add-ons, IRSA (EBS CSI, LBC, pgBackRest), S3 pgBackRest repo, ECR,
   Secrets Manager container, AWS Budget. `deploy/terraform/k3s`: one spot EC2 k3s node, 10 h
