@@ -13,6 +13,24 @@
 - Verified here: gate green (190 passed). NOT run: preflight against real AWS, anything on AWS.
 - Next: user follows the walkthrough (EKS path) and pastes evidence (P8.3).
 
+## Previous: P7.3 GPU numbers recorded (2026-11-28)
+- The user ran `serving/run_all.sh` on a RunPod L40S. All 4 arms ran with 0 errors. Raw files are in
+  `serving/results/` (force-added: the folder is gitignored). The table is in RESULTS "Phase 7.3" and ADR 013 is updated.
+- Headline: prefix caching gives 8.9x tok/s at c=32; EAGLE-3 halves TPOT at c=1 and, unexpectedly,
+  still helps at c=32 (+28%). Recommended default: prefix+eagle3.
+- Open: LiteLLM-hop bench (runbook step 4) and a decode-heavy workload are NOT MEASURED.
+  Phase 7 is otherwise done.
+
+## Previous: runbook fixes from the first real RunPod run (2026-11-28)
+- The user hit two gaps on the L40S: exports made before `tmux new` are lost inside tmux, and
+  `pip install vllm` was not on PATH after `uv sync`, so all four arms "did not run".
+- Runbook step 2 now starts tmux first and exports inside it; vLLM goes into its own venv
+  (`/opt/vllm`) so `uv run` never re-syncs it. `serve.sh` finds `/opt/vllm/bin/vllm` (or
+  `VLLM_BIN`); `run_all.sh` checks HF_TOKEN + vllm up front, prints a dead arm's log tail,
+  and runs the bench with `uv run --no-sync`.
+- Verified here: gate green, 189 passed (1 new preflight test). GPU path UNVERIFIED by me;
+  the user's run is in progress.
+
 ## Previous: Phase 8 (P8.1-P8.3 code) AWS burst as code + runbook, nothing applied
 - `deploy/terraform/eks`: VPC (public subnets, no NAT), EKS 1.34 standard support, spot node group
   (1 AZ), EBS CSI + core add-ons, IRSA (EBS CSI, LBC, pgBackRest), S3 pgBackRest repo, ECR,

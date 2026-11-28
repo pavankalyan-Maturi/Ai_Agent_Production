@@ -391,3 +391,56 @@ The judge clears the 0.6 bar even at its CI lower bound; token F1 barely agrees 
 (mean F1 0.501 vs 84% human-correct). F1 is the wrong headline metric for this agent; judge
 accuracy (81%) is close to the human rate (84%). `evals/baselines/agent_off.json` (per-question
 f1, usd, evidence recall, judge verdict from this run) now drives the paired-bootstrap gate.
+
+## Phase 7.3: vLLM on a rented GPU (ADR 013)
+Run by the user on 2026-11-28: RunPod 1x **NVIDIA L40S 46 GB** (driver 595.112.07), vLLM **0.34.0**
+native (`vllm serve`, no Docker), Llama-3.1-8B-Instruct bf16, EAGLE-3 head
+`yuhuili/EAGLE3-LLaMA3.1-Instruct-8B`, 3 speculative tokens. `serving/bench.py`: 64 streamed
+requests per level, shared ~1.8k-token system prompt, temperature 0, 0 errors in every cell.
+Raw JSON, `gpu.csv` and log excerpts: `serving/results/`.
+
+| Arm | Conc. | TTFT p50 ms | TTFT p95 ms | TPOT p50 ms | Output tok/s |
+|---|---|---|---|---|---|
+| baseline | 1 | 207 | 211 | 21.5 | 31.9 |
+| baseline | 8 | 652 | 1001 | 61.5 | 85.6 |
+| baseline | 32 | 2962 | 5505 | 173.6 | 97.0 |
+| prefix | 1 | 52 | 54 | 21.5 | 43.2 |
+| prefix | 8 | 83 | 117 | 23.2 | 298.6 |
+| prefix | 32 | 161 | 285 | 27.9 | 861.5 |
+| eagle3 | 1 | 219 | 221 | 10.2 | 47.2 |
+| eagle3 | 8 | 686 | 1033 | 49.7 | 95.1 |
+| eagle3 | 32 | 4969 | 5683 | 69.0 | 96.0 |
+| prefix+eagle3 | 1 | 57 | 58 | 10.1 | 79.6 |
+| prefix+eagle3 | 8 | 96 | 125 | 11.7 | 483.4 |
+| prefix+eagle3 | 32 | 207 | 314 | 16.6 | **1102.5** |
+
+What it shows:
+- **Prefix caching is the big win for the agent's shape.** TTFT drops 4x at c=1 (207 -> 52 ms)
+  and 18x at c=32 (2962 -> 161 ms); throughput at c=32 goes 97 -> 862 tok/s (8.9x). Without it
+  the box is prefill-bound: tok/s is flat from c=8 to c=32.
+- **EAGLE-3 halves TPOT** at c=1 (21.5 -> 10.2 ms). Mean acceptance length 2.71 of 4, draft
+  acceptance ~57% (per position 1.00 / 0.43 / 0.29), from the vLLM SpecDecoding metrics.
+  It does nothing for TTFT (it is a decode optimisation).
+- **Did not replicate: "speculative gain fades at 32".** Without prefix caching, eagle3 tok/s at
+  c=32 equals baseline (96 vs 97) because prefill dominates, so the test says nothing about decode.
+  With prefix caching, EAGLE-3 still cuts TPOT at c=32 (27.9 -> 16.6 ms) and lifts tok/s +28%
+  (862 -> 1103): with ~19-token answers the decode batch never gets compute-bound on an L40S.
+- Recommended config: `prefix+eagle3` (11.4x baseline tok/s at c=32, TTFT p95 314 ms).
+
+Caveats:
+- One run per cell, 64 requests per level; c=32 levels finish in ~1.1-1.4 s, so those tok/s are
+  noisy. No repeats, no CI.
+- Answers are short (~19 output tokens per request: "summarise rule N in one line"), so this is a
+  prefill-heavy workload. Decode-heavy loads (long answers) are NOT MEASURED; there EAGLE-3 should
+  matter more and the c=32 fade may show up.
+- TPOT here is (total - TTFT)/(tokens - 1), so it includes stalls from other requests' prefill;
+  that inflates baseline/eagle3 TPOT at c=8/32.
+- The EAGLE-3 head ships fp16 weights, cast to bf16 at load (vLLM warning). Acceptance looked
+  normal, so no harm observed.
+- Through LiteLLM (runbook step 4): NOT MEASURED.
+
+Log notes (both harmless, checked in the raw logs):
+- `prefix+eagle3`: "Compiling model again due to a load failure ... [Errno 14] Bad address" on
+  the torch AOT compile cache. vLLM fell back to a fresh compile; it only costs startup time.
+- `prefix+eagle3` ends with `EngineDeadError`: it happens after the last `200 OK`, during our
+  `run_all.sh` kill (`shutdown ... mode=abort timeout=0s`). Bench errors = 0.
