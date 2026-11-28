@@ -1,0 +1,41 @@
+# Excerpt of the vLLM server log for arm prefix+eagle3 (P7.3, RunPod L40S, 2026-11-28).
+# Engine init, KV cache, warnings, spec-decode metrics, then the last 25 lines.
+(APIServer pid=3062) WARNING 11-28 02:23:41 [model.py:2560] Casting torch.float16 to torch.bfloat16.
+(APIServer pid=3062) WARNING 11-28 02:23:41 [vllm.py:2282] max_num_scheduled_tokens is set to 2048 based on the speculative decoding settings. This may lead to suboptimal performance. Consider increasing max_num_batched_tokens to accommodate the additional draft token slots, or decrease num_speculative_tokens.
+(EngineCore pid=3279) INFO 11-28 02:23:52 [core.py:153] Initializing a V1 LLM engine (v0.34.0) with config: model='meta-llama/Llama-3.1-8B-Instruct', speculative_config=SpeculativeConfig(method='eagle3', model='yuhuili/EAGLE3-LLaMA3.1-Instruct-8B', num_spec_tokens=3), tokenizer='meta-llama/Llama-3.1-8B-Instruct', skip_tokenizer_init=False, tokenizer_mode=auto, revision=main, tokenizer_revision=mai
+(EngineCore pid=3279) WARNING 11-28 02:24:04 [decorators.py:340] [backbone] Compiling model again due to a load failure from /root/.cache/vllm/torch_compile_cache/torch_aot_compile/b6564a38713d47d3d398ca03fcf522c37360cb77a11eccec8deb98cef16995b3/rank_0_0/model, reason: [Errno 14] Bad address: '/root/Ai_Agent_Production/.venv/lib/python3.12/site-packages/triton/backends/nvidia/bin/ptxas'
+(EngineCore pid=3279) WARNING 11-28 02:24:25 [extensible_kv_cache.py:662] gpu_memory_utilization=0.9 caps this instance at 39.95 GiB, keeping 2.91 GiB of free device memory out of the KV cache. The extensible KV cache is sized from the memory measured after warmup and CUDA graph capture, so vLLM's own use needs no headroom below 1.0. Leave gpu_memory_utilization unset unless it leaves room for mem
+(EngineCore pid=3279) INFO 11-28 02:24:25 [kv_cache_utils.py:1168] GPU KV cache size: 180,224 tokens, Maximum concurrency for 8,192 tokens per request: 22.00x
+(EngineCore pid=3279) INFO 11-28 02:24:25 [core.py:451] init engine (profile, create kv cache, warmup model) took 22.58 s (compilation: 9.89 s)
+(EngineCore pid=3279) WARNING 11-28 02:24:26 [vllm.py:2282] max_num_scheduled_tokens is set to 2048 based on the speculative decoding settings. This may lead to suboptimal performance. Consider increasing max_num_batched_tokens to accommodate the additional draft token slots, or decrease num_speculative_tokens.
+(APIServer pid=3062) WARNING 11-28 02:24:26 [model.py:1931] Default vLLM sampling parameters have been overridden by the model's `generation_config.json`: `{'temperature': 0.6, 'top_p': 0.9}`. If this is not intended, please relaunch vLLM instance with `--generation-config vllm`.
+(APIServer pid=3062) INFO 11-28 02:24:37 [metrics.py:120] SpecDecoding metrics: Mean acceptance length: 2.71, Accepted throughput: 28.27 tokens/s, Drafted throughput: 49.47 tokens/s, Accepted: 312 tokens, Drafted: 546 tokens, Per-position acceptance rate: 1.000, 0.429, 0.286, Avg Draft acceptance rate: 57.1%
+(APIServer pid=3062) INFO 11-28 02:24:47 [metrics.py:120] SpecDecoding metrics: Mean acceptance length: 2.72, Accepted throughput: 66.30 tokens/s, Drafted throughput: 115.79 tokens/s, Accepted: 663 tokens, Drafted: 1158 tokens, Per-position acceptance rate: 1.000, 0.430, 0.288, Avg Draft acceptance rate: 57.3%
+(APIServer pid=3062) WARNING 11-28 02:24:50 [utils.py:648] [shutdown] Process manager: force killing remaining processes count=1
+(APIServer pid=3062) WARNING 11-28 02:24:50 [utils.py:653] [shutdown] Process manager: force killing remaining process EngineCore pid 3279
+# ...
+(APIServer pid=3062) WARNING 11-28 02:24:50 [utils.py:648] [shutdown] Process manager: force killing remaining processes count=1
+(APIServer pid=3062) WARNING 11-28 02:24:50 [utils.py:653] [shutdown] Process manager: force killing remaining process EngineCore pid 3279
+(EngineCore pid=3279) INFO 11-28 02:24:50 [core.py:1698] [shutdown] EngineCore: trigger received signal=SIGTERM
+(EngineCore pid=3279) INFO 11-28 02:24:50 [core.py:1889] [shutdown] EngineCore: start mode=abort timeout=0s
+(EngineCore pid=3279) INFO 11-28 02:24:50 [core.py:1920] [shutdown] EngineCore: request processing complete; starting resource teardown
+(EngineCore pid=3279) INFO 11-28 02:24:50 [core.py:1746] [shutdown] EngineCore: exiting busy loop
+(APIServer pid=3062) INFO 11-28 02:24:50 [core_client.py:826] [shutdown] MPClient: engine manager stopped
+(APIServer pid=3062) INFO 11-28 02:24:50 [core_client.py:827] [shutdown] MPClient: cleaning up background resources
+(APIServer pid=3062) INFO 11-28 02:24:50 [core_client.py:829] [shutdown] MPClient: complete
+(APIServer pid=3062) ERROR 11-28 02:24:50 [async_llm.py:957] AsyncLLM output_handler failed.
+(APIServer pid=3062) ERROR 11-28 02:24:50 [async_llm.py:957] Traceback (most recent call last):
+(APIServer pid=3062) ERROR 11-28 02:24:50 [async_llm.py:957]   File "/root/Ai_Agent_Production/.venv/lib/python3.12/site-packages/vllm/v1/engine/async_llm.py", line 894, in output_handler
+(APIServer pid=3062) ERROR 11-28 02:24:50 [async_llm.py:957]     outputs = await engine_core.get_output_async()
+(APIServer pid=3062) ERROR 11-28 02:24:50 [async_llm.py:957]               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+(APIServer pid=3062) ERROR 11-28 02:24:50 [async_llm.py:957]   File "/root/Ai_Agent_Production/.venv/lib/python3.12/site-packages/vllm/v1/engine/core_client.py", line 1310, in get_output_async
+(APIServer pid=3062) ERROR 11-28 02:24:50 [async_llm.py:957]     raise self._format_exception(outputs) from None
+(APIServer pid=3062) ERROR 11-28 02:24:50 [async_llm.py:957] vllm.v1.engine.exceptions.EngineDeadError: EngineCore encountered an issue. See stack trace (above) for the root cause.
+(APIServer pid=3062) INFO 11-28 02:24:50 [launcher.py:278] [shutdown] API server: engine client stopped
+(APIServer pid=3062) INFO 11-28 02:24:50 [launcher.py:281] [shutdown] API server: signalling HTTP server shutdown
+(APIServer pid=3062) INFO 11-28 02:24:50 [launcher.py:304] [shutdown] API server: shutting down FastAPI HTTP server
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+/usr/lib/python3.12/multiprocessing/resource_tracker.py:254: UserWarning: resource_tracker: There appear to be 1 leaked semaphore objects to clean up at shutdown
+  warnings.warn('resource_tracker: There appear to be %d '

@@ -136,7 +136,7 @@ def test_run_all_marks_dead_arm_and_moves_on(tmp_path: Path) -> None:
     import subprocess
 
     repo = tmp_path / "repo"
-    shutil.copytree(ROOT / "serving", repo / "serving")
+    shutil.copytree(ROOT / "serving", repo / "serving", ignore=shutil.ignore_patterns("results"))
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
     env = {**_fake_vllm(bin_dir, 1), "ARM_GAP_S": "0"}
@@ -157,7 +157,9 @@ def test_run_all_fails_fast_without_vllm(tmp_path: Path) -> None:
     import shutil
     import subprocess
 
-    shutil.copytree(ROOT / "serving", tmp_path / "serving")
+    shutil.copytree(
+        ROOT / "serving", tmp_path / "serving", ignore=shutil.ignore_patterns("results")
+    )
     bin_dir = tmp_path / "bin"  # only what the preflight needs: no docker, no vllm
     bin_dir.mkdir()
     for tool in ("bash", "dirname"):

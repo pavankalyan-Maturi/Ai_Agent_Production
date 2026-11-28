@@ -1,0 +1,37 @@
+{
+  "arm": "prefix+eagle3",
+  "model": "local-llm",
+  "max_tokens": 256,
+  "levels": [
+    {
+      "concurrency": 1,
+      "requests": 64,
+      "errors": 0,
+      "ttft_p50_ms": 56.47142103407532,
+      "ttft_p95_ms": 57.54106410313398,
+      "tpot_p50_ms": 10.126195890026993,
+      "output_tok_per_s": 79.6001241727711,
+      "wall_s": 15.276358079048805
+    },
+    {
+      "concurrency": 8,
+      "requests": 64,
+      "errors": 0,
+      "ttft_p50_ms": 96.44704998936504,
+      "ttft_p95_ms": 124.51257603242993,
+      "tpot_p50_ms": 11.696873391176469,
+      "output_tok_per_s": 483.4492839423515,
+      "wall_s": 2.515258663916029
+    },
+    {
+      "concurrency": 32,
+      "requests": 64,
+      "errors": 0,
+      "ttft_p50_ms": 207.38498901482671,
+      "ttft_p95_ms": 313.8879530597478,
+      "tpot_p50_ms": 16.591747391632655,
+      "output_tok_per_s": 1102.5110324827353,
+      "wall_s": 1.102936808951199
+    }
+  ]
+}
