@@ -151,3 +151,29 @@ def test_run_all_marks_dead_arm_and_moves_on(tmp_path: Path) -> None:
     for arm in ("baseline", "eagle3"):
         data = json.loads((repo / f"serving/results/{arm}.json").read_text())
         assert data == {"arm": arm, "did_not_run": True}
+
+
+def test_run_all_fails_fast_without_vllm(tmp_path: Path) -> None:
+    import shutil
+    import subprocess
+
+    shutil.copytree(ROOT / "serving", tmp_path / "serving")
+    bin_dir = tmp_path / "bin"  # only what the preflight needs: no docker, no vllm
+    bin_dir.mkdir()
+    for tool in ("bash", "dirname"):
+        (bin_dir / tool).symlink_to(shutil.which(tool) or f"/usr/bin/{tool}")
+    env = {
+        "PATH": str(bin_dir),
+        "HF_TOKEN": "x",
+        "VLLM_API_KEY": "y",
+        "VLLM_BIN": str(tmp_path / "missing"),
+    }
+    proc = subprocess.run(  # noqa: S603 - fixed repo script
+        [str(bin_dir / "bash"), str(tmp_path / "serving/run_all.sh")],
+        env=env,
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    assert proc.returncode == 127 and "runbook" in proc.stderr
+    assert not (tmp_path / "serving/results").exists()

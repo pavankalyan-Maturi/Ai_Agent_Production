@@ -29,7 +29,10 @@ fi
 
 RUNNER="${VLLM_RUNNER:-$(command -v docker >/dev/null && echo docker || echo native)}"
 if [[ "$RUNNER" == native ]]; then
-  exec vllm serve "${args[@]}"
+  # vLLM lives in its own venv (runbook step 2) so it never fights the project lockfile.
+  VLLM_BIN="${VLLM_BIN:-$(command -v vllm || echo /opt/vllm/bin/vllm)}"
+  [[ -x "$VLLM_BIN" ]] || { echo "vllm not found: install it (runbook step 2) or set VLLM_BIN" >&2; exit 127; }
+  exec "$VLLM_BIN" serve "${args[@]}"
 fi
 docker rm -f pap-vllm >/dev/null 2>&1 || true
 exec docker run --name pap-vllm --gpus all --ipc=host -p "127.0.0.1:${PORT}:${PORT}" \
